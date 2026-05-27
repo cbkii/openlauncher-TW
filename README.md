@@ -1,4 +1,4 @@
-<img width="1920" height="1080" alt="open-launcherbanner" src="https://github.com/user-attachments/assets/cef3c385-9665-4290-84fb-ea271fd4824d" />
+<img width="512" height="512" alt="logoo" src="https://github.com/user-attachments/assets/4c5c4ddb-836d-4c59-8325-76b8c8d78bb3" />
 <div align="center">
   <h1>Open Launcher</h1>
   <p><strong>An open-source, offline-first Android launcher built specifically for aftermarket car head units.</strong></p>
