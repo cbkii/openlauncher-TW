@@ -246,7 +246,44 @@ fun MapWidget(
         onDispose { mapView.overlays.remove(eventsOverlay) }
     }
 
-    // Indicador estilo Google Maps
+    // Indicador (Punto central con borde blanco)
+    val marker = remember(accent) {
+        Marker(mapView).apply {
+            val size = (22 * context.resources.displayMetrics.density).toInt()
+            val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+
+            // Pintura para el disco blanco de fondo con sombra
+            val paintDisc = Paint().apply {
+                isAntiAlias = true
+                color = android.graphics.Color.WHITE
+                setShadowLayer(6f, 0f, 3f, android.graphics.Color.argb(80, 0, 0, 0))
+            }
+
+            // Pintura para el círculo central con tu color de acento
+            val paintCentralCircle = Paint().apply {
+                isAntiAlias = true
+                color = accent.toArgb()
+            }
+
+            // 1. Dibujamos el disco blanco exterior (que hereda la sombra proyectada)
+            val center = size / 2f
+            val outerRadius = size / 2.4f
+            canvas.drawCircle(center, center, outerRadius, paintDisc)
+
+            // 2. Dibujamos el nuevo círculo central (reemplaza a la flecha)
+            // Ajusta el multiplicador (ej. 3.8f o 4f) si quieres el círculo interno más grande o pequeño
+            val innerRadius = size / 3.2f
+            canvas.drawCircle(center, center, innerRadius, paintCentralCircle)
+
+            icon = BitmapDrawable(context.resources, bitmap)
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            rotation = 0f
+        }
+    }
+
+    // Indicador estilo Google Maps (con flecha al centro)
+    /*
     val marker = remember(accent) {
         Marker(mapView).apply {
             val size = (32 * context.resources.displayMetrics.density).toInt()
@@ -286,7 +323,7 @@ fun MapWidget(
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             rotation = 0f
         }
-    }
+    } */
 
     // Función de zoom dinámico
     fun getZoomByAccuracy(accuracyInMeters: Float?): Double {
@@ -294,7 +331,7 @@ fun MapWidget(
             return when {
                 accuracyInMeters < 15f -> 17.0
                 accuracyInMeters < 50f -> 16.5
-                accuracyInMeters < 150f -> 16.0
+                accuracyInMeters < 150f -> 15.5
                 else -> 15.0
             }
     }
@@ -398,7 +435,7 @@ fun MapWidget(
         mapView.invalidate()
     }
 
-    Box(modifier = modifier.clip(RoundedCornerShape(20.dp))) {
+    Box(modifier = modifier.clip(RoundedCornerShape(4.dp))) {
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize()
