@@ -24,7 +24,11 @@ enum class DefaultShortcutIcon {
     // General utility
     TV, VIDEOCAM, STAR, MESSAGE, TIMER, LOCK, SETTINGS, FAVORITE,
     // Web / location
-    GLOBE
+    GLOBE,
+    // Nuevos
+    CUSTOM_MUSIC, CUSTOM_RADIO, CUSTOM_AAUTO, CUSTOM_PHONE, CUSTOM_VIDEO, CUSTOM_MAPS,
+    // Nuevos originales
+    CUSTOM_MUSIC_ORI, CUSTOM_RADIO_ORI, CUSTOM_AAUTO_ORI, CUSTOM_PHONE_ORI, CUSTOM_VIDEO_ORI, CUSTOM_MAPS_ORI
 }
 
 data class SoundPadConfig(

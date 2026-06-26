@@ -41,6 +41,10 @@ import com.openlauncher.app.data.ShortcutConfig
 import com.openlauncher.app.model.NavDestination
 import com.openlauncher.app.ui.theme.LocalDayMode
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
+import com.openlauncher.app.R
 
 private val ICON_SIZE   = 24.dp
 private val SHORTCUT_ICON_SIZE = 34.dp
@@ -96,7 +100,7 @@ fun Sidebar(
         }
     }
 
-    val statusIconColor   = if (isDayMode) Color(0xFF444444) else Color(0xFF666666)
+val statusIconColor   = if (isDayMode) Color(0xFF444444) else Color(0xFF666666)
 
     val timeFormatter = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
     val dateFormatter = remember { java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()) }
@@ -117,6 +121,10 @@ fun Sidebar(
     }
 
     val statusIcons: @Composable () -> Unit = {
+        // CORRECCIÓN: Ahora en horizontal también se apilan verticalmente si lo deseas,
+        // o si prefieres, se quedan en Row pero con padding vertical
+        // Para seguir la lógica vertical, lo ideal es que siempre sea un Row interno
+        // pero que su padding/posicionamiento cambie.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -149,31 +157,83 @@ fun Sidebar(
     }
 
     val clockContent: @Composable () -> Unit = {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Text(
-                text = timeText,
-                color = if (isDayMode) Color.Black else Color.White,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Text(
-                text = dateText.uppercase(),
-                color = if (isDayMode) Color(0xFF666666) else Color(0xFF999999),
-                fontSize = 10.sp,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-            )
-            Text(
-                text = dayText,
-                color = if (isDayMode) Color(0xFF666666) else Color(0xFF999999),
-                fontSize = 10.sp
-            )
+        // CORRECCIÓN: En horizontal ahora se usa el mismo diseño vertical
+        if (isHorizontal) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 8.dp) // Añadimos padding vertical para ajustar
+            ) {
+                Text(
+                    text = timeText,
+                     color = if (isDayMode) Color.Black else Color.White,
+                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                     fontSize = 16.sp
+                )
+                Text(
+                    text = "${dateText.uppercase()}, $dayText",
+                     color = if (isDayMode) Color(0xFF666666) else Color(0xFF999999),
+                     fontSize = 10.sp,
+                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = timeText,
+                     color = if (isDayMode) Color.Black else Color.White,
+                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                     fontSize = 16.sp
+                )
+                Text(
+                    text = dateText.uppercase(),
+                     color = if (isDayMode) Color(0xFF666666) else Color(0xFF999999),
+                     fontSize = 10.sp,
+                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+                Text(
+                    text = dayText,
+                     color = if (isDayMode) Color(0xFF666666) else Color(0xFF999999),
+                     fontSize = 10.sp
+                )
+            }
         }
     }
 
     val editButtons: @Composable () -> Unit = {
+        // Si es horizontal usamos Row, si es vertical usamos Column
+        if (isHorizontal) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onToggleEditMode, modifier = Modifier.size(NAV_SLOT_SIZE)) {
+                    Icon(Icons.Default.Edit, null, tint = if (editMode) accent else statusIconColor, modifier = Modifier.size(20.dp))
+                }
+                if (editMode) {
+                    IconButton(onClick = onOpenWidgetLibrary, modifier = Modifier.size(NAV_SLOT_SIZE)) {
+                        Icon(Icons.Default.Dashboard, null, tint = statusIconColor, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (editMode) {
+                    IconButton(onClick = onOpenWidgetLibrary, modifier = Modifier.size(NAV_SLOT_SIZE)) {
+                        Icon(Icons.Default.Dashboard, null, tint = statusIconColor, modifier = Modifier.size(20.dp))
+                    }
+                }
+                IconButton(onClick = onToggleEditMode, modifier = Modifier.size(NAV_SLOT_SIZE)) {
+                    Icon(Icons.Default.Edit, null, tint = if (editMode) accent else statusIconColor, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+    }
+
+  /*  val editButtons: @Composable () -> Unit = {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (editMode) {
                 IconButton(onClick = onOpenWidgetLibrary, modifier = Modifier.size(NAV_SLOT_SIZE)) {
@@ -184,7 +244,7 @@ fun Sidebar(
                 Icon(Icons.Default.Edit, null, tint = if (editMode) accent else statusIconColor, modifier = Modifier.size(20.dp))
             }
         }
-    }
+    } */
 
     val shortcutsContent: @Composable () -> Unit = {
         settings.shortcuts.forEachIndexed { index, shortcut ->
@@ -257,54 +317,49 @@ fun Sidebar(
     if (isHorizontal) {
         Box(
             modifier = modifier
-                .fillMaxWidth()
-                .height(SIDEBAR_W)
-                .background(sidebarBg)
+            .fillMaxWidth()
+            .height(SIDEBAR_W - 6.dp)
+           // .clip(RoundedCornerShape(20.dp))
+            .background(sidebarBg)
         ) {
+            // 1. Accesos directos / Shortcuts (Centro)
             Row(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxHeight()
-                    .padding(start = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                clockContent()
-                Spacer(Modifier.width(12.dp))
-                statusIcons()
-            }
-
-            // Shortcuts centred, inset past the edge-pinned nav buttons and
-            // scrollable — an unbounded row ran beneath the nav buttons and off
-            // both screen edges once enough slots were added
-            Row(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxHeight()
-                    .padding(horizontal = 160.dp)
-                    .horizontalScroll(rememberScrollState()),
+                .align(Alignment.Center)
+                .fillMaxHeight()
+                .padding(horizontal = 10.dp)
+                .horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 shortcutsContent()
             }
 
-            // Nav buttons pinned to one edge, Home always outermost
+            // 2. Botones de Navegación (Izquierda)
             Row(
                 modifier = Modifier
-                    .align(if (settings.bottomBarShortcutsRight) Alignment.CenterEnd else Alignment.CenterStart)
-                    .fillMaxHeight(),
+                .align(Alignment.CenterStart)
+                .fillMaxHeight(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (!settings.bottomBarShortcutsRight) {
-                    editButtons()
-                    NavButton(Icons.Default.Home,     "Home",     currentDest == NavDestination.HOME,        accent, iconInactive, true) { onNavigate(NavDestination.HOME) }
-                    NavButton(Icons.Default.Settings, "Settings", currentDest == NavDestination.SETTINGS,    accent, iconInactive, true) { onNavigate(NavDestination.SETTINGS) }
-                    NavButton(Icons.Default.Apps,     "Apps",     currentDest == NavDestination.APP_LIBRARY, accent, iconInactive, true) { onNavigate(NavDestination.APP_LIBRARY) }
-                } else {
-                    NavButton(Icons.Default.Apps,     "Apps",     currentDest == NavDestination.APP_LIBRARY, accent, iconInactive, true) { onNavigate(NavDestination.APP_LIBRARY) }
-                    NavButton(Icons.Default.Settings, "Settings", currentDest == NavDestination.SETTINGS,    accent, iconInactive, true) { onNavigate(NavDestination.SETTINGS) }
-                    NavButton(Icons.Default.Home,     "Home",     currentDest == NavDestination.HOME,        accent, iconInactive, true) { onNavigate(NavDestination.HOME) }
-                    editButtons()
-                }
+                NavButton(Icons.Default.Home,     "Home",     currentDest == NavDestination.HOME,        accent, iconInactive, true) { onNavigate(NavDestination.HOME) }
+                NavButton(Icons.Default.Settings, "Settings", currentDest == NavDestination.SETTINGS,    accent, iconInactive, true) { onNavigate(NavDestination.SETTINGS) }
+                NavButton(Icons.Default.Apps,     "Apps",     currentDest == NavDestination.APP_LIBRARY, accent, iconInactive, true) { onNavigate(NavDestination.APP_LIBRARY) }
+                editButtons()
+            }
+
+            // 3. Estado + Reloj juntos (Derecha) - Compacto
+            Row(
+                modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .padding(end = 16.dp), // Padding general más corto
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp) // Espacio elegante y compacto
+            ) {
+                // CORRECCIÓN: Invertimos el orden para que los iconos de estado queden a la derecha
+                // y el reloj compacto a la izquierda.
+                statusIcons()
+                clockContent()
             }
         }
     } else {
@@ -452,38 +507,42 @@ private fun ShortcutSlot(
         val override = shortcut.customIconOverride
         when {
             override != null && override != DefaultShortcutIcon.NONE -> {
+                val isPng = override.name.startsWith("CUSTOM_") // Ajustado a tus nombres reales (CUSTOM_)
                 Icon(
-                    imageVector        = override.toIcon(),
-                    contentDescription = shortcut.label,
-                    tint               = iconInactive,
-                    modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
+                    painter            = override.toPainter(),
+                     contentDescription = shortcut.label,
+                     tint               = if (isPng) Color.Unspecified else iconInactive,
+                     modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
                 )
             }
             resolvedIcon != null -> {
-                // Cache per icon — every slot recomposes each drag frame, and an
-                // un-remembered toBitmap allocated a fresh bitmap per slot per frame
                 val bmp = remember(resolvedIcon) { resolvedIcon.toBitmap(80, 80) }
                 Icon(
                     painter            = BitmapPainter(bmp.asImageBitmap()),
-                    contentDescription = shortcut.label,
-                    tint               = Color.Unspecified,
-                    modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
+                     contentDescription = shortcut.label,
+                     tint               = Color.Unspecified,
+                     modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
                 )
             }
             shortcut.isDefault -> {
+                // Evaluamos de forma segura usando el defaultIcon, asegurando que no sea nulo
+                val defaultIcon = shortcut.defaultIcon
+                val isPng = defaultIcon?.name?.startsWith("CUSTOM_") == true
                 Icon(
-                    imageVector        = shortcut.defaultIcon.toIcon(),
-                    contentDescription = shortcut.label,
-                    tint               = iconInactive,
-                    modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
+                    painter            = defaultIcon?.toPainter() ?: rememberVectorPainter(Icons.Default.Apps),
+                     contentDescription = shortcut.label,
+                     tint               = if (isPng) Color.Unspecified else iconInactive,
+                     modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
                 )
             }
             else -> {
+                val defaultIcon = shortcut.defaultIcon
+                val isPng = defaultIcon?.name?.startsWith("CUSTOM_") == true
                 Icon(
-                    imageVector        = Icons.Default.Add,
-                    contentDescription = "Add shortcut",
-                    tint               = if (LocalDayMode.current) Color(0xFFBBBBBB) else Color(0xFF252525),
-                    modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
+                    painter            = defaultIcon?.toPainter() ?: rememberVectorPainter(Icons.Default.Apps),
+                     contentDescription = shortcut.label,
+                     tint               = if (isPng) Color.Unspecified else iconInactive,
+                     modifier           = Modifier.size(SHORTCUT_ICON_SIZE)
                 )
             }
         }
@@ -590,16 +649,17 @@ private fun IconPickerDialog(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isSelected) accent.copy(alpha = 0.18f) else Color(0xFF1A1A1A))
-                            .clickable { onPick(iconOption) }
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (isSelected) accent.copy(alpha = 0.18f) else Color(0xFF1A1A1A))
+                        .clickable { onPick(iconOption) }
                     ) {
+                        val isOptionPng = iconOption.name.startsWith("CUSTOM_")
                         Icon(
-                            imageVector        = iconOption.toIcon(),
-                            contentDescription = iconOption.name,
-                            tint               = if (isSelected) accent else Color(0xFF888888),
-                            modifier           = Modifier.size(20.dp)
+                            painter            = iconOption.toPainter(), // <-- CAMBIADO A painter
+                             contentDescription = iconOption.name,
+                             tint               = if (isOptionPng) Color.Unspecified else if (isSelected) accent else Color(0xFF888888),
+                             modifier           = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -642,40 +702,51 @@ private fun NavButton(
     }
 }
 
-fun DefaultShortcutIcon.toIcon(): ImageVector = when (this) {
-    // Navigation & vehicle
-    DefaultShortcutIcon.RADIO       -> Icons.Default.Radio
-    DefaultShortcutIcon.CAMERA      -> Icons.Default.CameraAlt
-    DefaultShortcutIcon.PHONE       -> Icons.Default.Phone
-    DefaultShortcutIcon.MAP         -> Icons.Default.Map
-    DefaultShortcutIcon.NAVIGATION  -> Icons.Default.Navigation
-    DefaultShortcutIcon.CAR         -> Icons.Default.DirectionsCar
-    DefaultShortcutIcon.GAS_STATION -> Icons.Default.LocalGasStation
-    DefaultShortcutIcon.DASHBOARD   -> Icons.Default.Speed
-    // Audio & media
-    DefaultShortcutIcon.MUSIC       -> Icons.Default.MusicNote
-    DefaultShortcutIcon.SPEAKER     -> Icons.Default.Speaker
-    DefaultShortcutIcon.HEADSET     -> Icons.Default.Headset
-    DefaultShortcutIcon.EQUALIZER   -> Icons.Default.Equalizer
-    DefaultShortcutIcon.VOLUME_UP   -> Icons.Default.VolumeUp
-    // Connectivity
-    DefaultShortcutIcon.BLUETOOTH   -> Icons.Default.Bluetooth
-    DefaultShortcutIcon.WIFI        -> Icons.Default.Wifi
-    // Lighting & climate
-    DefaultShortcutIcon.LIGHTBULB   -> Icons.Default.Lightbulb
-    DefaultShortcutIcon.BRIGHTNESS  -> Icons.Default.BrightnessHigh
-    DefaultShortcutIcon.AC          -> Icons.Default.AcUnit
-    DefaultShortcutIcon.THERMOSTAT  -> Icons.Default.Thermostat
-    // General utility
-    DefaultShortcutIcon.TV          -> Icons.Default.Tv
-    DefaultShortcutIcon.VIDEOCAM    -> Icons.Default.Videocam
-    DefaultShortcutIcon.STAR        -> Icons.Default.Star
-    DefaultShortcutIcon.MESSAGE     -> Icons.Default.Message
-    DefaultShortcutIcon.TIMER       -> Icons.Default.Timer
-    DefaultShortcutIcon.LOCK        -> Icons.Default.Lock
-    DefaultShortcutIcon.SETTINGS    -> Icons.Default.Settings
-    DefaultShortcutIcon.FAVORITE    -> Icons.Default.Favorite
-    // Web / location
-    DefaultShortcutIcon.GLOBE       -> Icons.Default.Language
-    DefaultShortcutIcon.NONE        -> Icons.Default.Apps
+@Composable
+fun DefaultShortcutIcon.toPainter(): Painter = when (this) {
+    // Para todos los que usan Icons.Default (Material Vectors), los envolvemos en rememberVectorPainter()
+    DefaultShortcutIcon.RADIO       -> rememberVectorPainter(Icons.Default.Radio)
+    DefaultShortcutIcon.CAMERA      -> rememberVectorPainter(Icons.Default.CameraAlt)
+    DefaultShortcutIcon.PHONE       -> rememberVectorPainter(Icons.Default.Phone)
+    DefaultShortcutIcon.MAP         -> rememberVectorPainter(Icons.Default.Map)
+    DefaultShortcutIcon.NAVIGATION  -> rememberVectorPainter(Icons.Default.Navigation)
+    DefaultShortcutIcon.CAR         -> rememberVectorPainter(Icons.Default.DirectionsCar)
+    DefaultShortcutIcon.GAS_STATION -> rememberVectorPainter(Icons.Default.LocalGasStation)
+    DefaultShortcutIcon.DASHBOARD   -> rememberVectorPainter(Icons.Default.Speed)
+    DefaultShortcutIcon.MUSIC       -> rememberVectorPainter(Icons.Default.MusicNote)
+    DefaultShortcutIcon.SPEAKER     -> rememberVectorPainter(Icons.Default.Speaker)
+    DefaultShortcutIcon.HEADSET     -> rememberVectorPainter(Icons.Default.Headset)
+    DefaultShortcutIcon.EQUALIZER   -> rememberVectorPainter(Icons.Default.Equalizer)
+    DefaultShortcutIcon.VOLUME_UP   -> rememberVectorPainter(Icons.Default.VolumeUp)
+    DefaultShortcutIcon.BLUETOOTH   -> rememberVectorPainter(Icons.Default.Bluetooth)
+    DefaultShortcutIcon.WIFI        -> rememberVectorPainter(Icons.Default.Wifi)
+    DefaultShortcutIcon.LIGHTBULB   -> rememberVectorPainter(Icons.Default.Lightbulb)
+    DefaultShortcutIcon.BRIGHTNESS  -> rememberVectorPainter(Icons.Default.BrightnessHigh)
+    DefaultShortcutIcon.AC          -> rememberVectorPainter(Icons.Default.AcUnit)
+    DefaultShortcutIcon.THERMOSTAT  -> rememberVectorPainter(Icons.Default.Thermostat)
+    DefaultShortcutIcon.TV          -> rememberVectorPainter(Icons.Default.Tv)
+    DefaultShortcutIcon.VIDEOCAM    -> rememberVectorPainter(Icons.Default.Videocam)
+    DefaultShortcutIcon.STAR        -> rememberVectorPainter(Icons.Default.Star)
+    DefaultShortcutIcon.MESSAGE     -> rememberVectorPainter(Icons.Default.Message)
+    DefaultShortcutIcon.TIMER       -> rememberVectorPainter(Icons.Default.Timer)
+    DefaultShortcutIcon.LOCK        -> rememberVectorPainter(Icons.Default.Lock)
+    DefaultShortcutIcon.SETTINGS    -> rememberVectorPainter(Icons.Default.Settings)
+    DefaultShortcutIcon.FAVORITE    -> rememberVectorPainter(Icons.Default.Favorite)
+    DefaultShortcutIcon.GLOBE       -> rememberVectorPainter(Icons.Default.Language)
+    DefaultShortcutIcon.NONE        -> rememberVectorPainter(Icons.Default.Apps)
+
+    // ── NUEVOS ICONOS PNG ──────────────────────────────────────────────────
+    DefaultShortcutIcon.CUSTOM_MUSIC   -> painterResource(id = R.drawable.music)
+    DefaultShortcutIcon.CUSTOM_RADIO   -> painterResource(id = R.drawable.radio)
+    DefaultShortcutIcon.CUSTOM_AAUTO   -> painterResource(id = R.drawable.aauto)
+    DefaultShortcutIcon.CUSTOM_PHONE   -> painterResource(id = R.drawable.phone)
+    DefaultShortcutIcon.CUSTOM_VIDEO   -> painterResource(id = R.drawable.video)
+    DefaultShortcutIcon.CUSTOM_MAPS   -> painterResource(id = R.drawable.maps)
+    // ── NUEVOS ICONOS PNG ──────────────────────────────────────────────────
+    DefaultShortcutIcon.CUSTOM_MUSIC_ORI   -> painterResource(id = R.drawable.music_ori)
+    DefaultShortcutIcon.CUSTOM_RADIO_ORI   -> painterResource(id = R.drawable.radio_ori)
+    DefaultShortcutIcon.CUSTOM_AAUTO_ORI   -> painterResource(id = R.drawable.aauto_ori)
+    DefaultShortcutIcon.CUSTOM_PHONE_ORI   -> painterResource(id = R.drawable.phone_ori)
+    DefaultShortcutIcon.CUSTOM_VIDEO_ORI   -> painterResource(id = R.drawable.video_ori)
+    DefaultShortcutIcon.CUSTOM_MAPS_ORI   -> painterResource(id = R.drawable.maps_ori)
 }

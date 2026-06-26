@@ -60,6 +60,77 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.TextUnit
+
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+
+
+/**
+ * Un composable de soporte para animar un dígito individual con un efecto de "rodillo"
+ * o revelación vertical con desvanecimiento.
+ *
+ * @param targetDigit El dígito objetivo (0-9).
+ * @param color El color del texto.
+ * @param fontSize El tamaño de la fuente.
+ * @param fontWeight El grosor de la fuente.
+ * @param letterSpacing El espaciado entre letras.
+ * @param fontFamily La familia de fuentes.
+ * @param moveUp Si es verdadero, el dígito viejo sale hacia arriba y el nuevo entra desde abajo.
+ * Si es falso, sale hacia abajo y entra desde arriba.
+ * @param modifier Modificador opcional.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun RollingDigit(
+    targetDigit: String,
+    color: Color,
+    fontSize: TextUnit,
+    fontWeight: FontWeight,
+    letterSpacing: TextUnit,
+    moveUp: Boolean,
+    modifier: Modifier = Modifier
+) {
+    AnimatedContent(
+        targetState = targetDigit,
+        transitionSpec = {
+            // ruede rápido y no se acumulen animaciones colisionadas.
+            if (moveUp) {
+                (slideInVertically(animationSpec = tween(300)) { height -> height } + fadeIn()) togetherWith
+                (slideOutVertically(animationSpec = tween(300)) { height -> -height } + fadeOut())
+            } else {
+                (slideInVertically(animationSpec = tween(300)) { height -> -height } + fadeIn()) togetherWith
+                (slideOutVertically(animationSpec = tween(300)) { height -> height } + fadeOut())
+            }
+        },
+        modifier = modifier,
+        label = "RollingDigitAnimation"
+    ) { digit ->
+        Text(
+            text = digit,
+             color = color,
+             fontSize = fontSize,
+             fontWeight = fontWeight,
+             letterSpacing = letterSpacing,
+        )
+    }
+}
 
 @Composable
 fun SpeedometerWidgetMaps(
@@ -73,7 +144,25 @@ fun SpeedometerWidgetMaps(
     val maxSpeed     = if (isMetric) 200f else 124f
     val rawSpeedMps = location?.speedMps ?: 0f
     val filteredSpeedMps = if (rawSpeedMps < 0.5f) 0f else rawSpeedMps
-    val speedDisplay = (filteredSpeedMps * if (isMetric) 3.6f else 2.237f).coerceAtLeast(0f)
+    val targetSpeed = (filteredSpeedMps * if (isMetric) 3.6f else 2.237f).coerceAtLeast(0f)
+
+    // Esto obliga al sistema a rellenar el vacío entre los calculos de la velocidad,
+    // dándole tiempo al usuario de ver la transición numérica.
+    val animatedSpeed by animateFloatAsState(
+        targetValue = targetSpeed,
+        animationSpec = tween(
+            durationMillis = 900,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "SpeedAnimation"
+    )
+
+    // El resto de los cálculos numéricos usando el valor animado y fluido
+    val speed = animatedSpeed.toInt()
+    val hundredsText = if (speed >= 100) ((speed / 100) % 10).toString() else ""
+    val tensText = if (speed >= 10) ((speed / 10) % 10).toString() else ""
+    val onesText = (speed % 10).toString()
+
     val unitLabel    = if (isMetric) "KM/H" else "MPH"
     val trackAlpha   = if (isDayMode) 0.18f else 0.07f
     val tickAlphaMaj = if (isDayMode) 0.50f else 0.28f
@@ -84,7 +173,7 @@ fun SpeedometerWidgetMaps(
     val tickBaseColor = if (isDayMode) Color(0xFF222222) else MaterialTheme.colorScheme.onBackground
 
     Box(
-        modifier         = modifier,
+        modifier          = modifier,
         contentAlignment = Alignment.Center
     ) {
         if (digitalOnly) {
@@ -93,19 +182,38 @@ fun SpeedometerWidgetMaps(
                 verticalArrangement = Arrangement.Center,
                 modifier            = Modifier.fillMaxSize()
             ) {
-                Text(
-                    text          = "%.0f".format(speedDisplay),
-                     color         = contentColor,
-                     fontSize      = 54.sp,
-                     fontWeight    = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                     letterSpacing = (-1.5).sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RollingDigit(
+                        targetDigit = hundredsText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = false
+                    )
+                    RollingDigit(
+                        targetDigit = tensText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = true
+                    )
+                    RollingDigit(
+                        targetDigit = onesText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = false
+                    )
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text          = unitLabel,
                      color         = contentColor.copy(alpha = subAlpha * 1.5f),
                      fontSize      = 10.sp,
-                     fontWeight    = androidx.compose.ui.text.font.FontWeight.Bold,
+                     fontWeight    = FontWeight.Bold,
                      letterSpacing = 2.sp
                 )
             }
@@ -117,7 +225,7 @@ fun SpeedometerWidgetMaps(
                 val trackW = arcR * 0.13f
                 val startAngle    = 150f
                 val sweepTotal    = 240f
-                val progressSweep = (speedDisplay / maxSpeed).coerceIn(0f, 1f) * sweepTotal
+                val progressSweep = (animatedSpeed / maxSpeed).coerceIn(0f, 1f) * sweepTotal
 
                 val tl   = Offset(cx - arcR, cy - arcR)
                 val sz   = Size(arcR * 2f, arcR * 2f)
@@ -163,12 +271,32 @@ fun SpeedometerWidgetMaps(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier            = Modifier.offset(y = (-4).dp)
             ) {
-                Text(
-                    text          = "%.0f".format(speedDisplay),
-                     color         = contentColor,
-                     fontSize      = 34.sp,
-                     letterSpacing = (-1).sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RollingDigit(
+                        targetDigit = hundredsText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = false
+                    )
+                    RollingDigit(
+                        targetDigit = tensText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = true
+                    )
+                    RollingDigit(
+                        targetDigit = onesText,
+                        color = contentColor,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-1).sp,
+                                 moveUp = false
+                    )
+                }
                 Text(
                     text          = unitLabel,
                      color         = contentColor.copy(alpha = subAlpha),
@@ -413,7 +541,7 @@ fun MapWidget(
             }
 
             if (isFirstLoad) {
-                mapView.controller.setZoom(17.0)
+                mapView.controller.setZoom(17.5)
                 mapView.controller.setCenter(geoPoint)
                 isFirstLoad = false
             }
@@ -624,7 +752,7 @@ fun MapWidget(
                 location?.let {
                     val geoPoint = GeoPoint(it.latitude, it.longitude)
                     mapView.controller.animateTo(geoPoint)
-                    mapView.controller.setZoom(17.0)
+                    mapView.controller.setZoom(17.5)
                     if (it.bearing != null) {
                         mapView.mapOrientation = -it.bearing!!
                     }

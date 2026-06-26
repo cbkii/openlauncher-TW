@@ -53,6 +53,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openlauncher.app.viewmodel.LauncherViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.graphics.Brush
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
+
+
+
 
 @Composable
 fun NowPlayingWidget(
@@ -200,8 +214,14 @@ private fun WaveProgressIndicator(
     trackColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "WaveTransition")
 
+    val phaseShift by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(), animationSpec = infiniteRepeatable(animation = tween(durationMillis = 1500, easing = LinearEasing)), label = "WavePhase"
+    )
+
+    Canvas(modifier = modifier) {
         val centerY = size.height / 2f
         val progressX = size.width * progress
 
@@ -214,41 +234,45 @@ private fun WaveProgressIndicator(
                  cap = StrokeCap.Round
         )
 
-        // Onda naranja
-        var previousX = 0f
-        var previousY = centerY
+        // Onda con movimiento inverso
+        if (progressX > 0f) {
+            val amplitude = 4.dp.toPx()
+            val wavelength = 24.dp.toPx()
+            val step = 2.dp.toPx()
 
-        val amplitude = 3.dp.toPx()
-        val wavelength = 20.dp.toPx()
-        val step = 1.dp.toPx()
+            val wavePath = Path().apply {
+                moveTo(0f, centerY)
+                var x = 0f
+                while (x <= progressX) {
+                    // Esto hace que los frentes de onda viajen desde el indicador hacia el inicio (atrás)
+                    val y = centerY + amplitude * sin(((x / wavelength) * (2f * Math.PI).toFloat()) + phaseShift)
+                    lineTo(x, y)
+                    x += step
+                }
+                // Asegurar el cierre exacto en la posición de la burbuja
+                val finalY = centerY + amplitude * sin(((progressX / wavelength) * (2f * Math.PI).toFloat()) + phaseShift)
+                lineTo(progressX, finalY)
+            }
 
-        var x = step
-
-        while (x <= progressX) {
-            val y = centerY +
-            amplitude * sin(
-                (x / wavelength) * (2f * Math.PI).toFloat()
-            )
-
-            drawLine(
+            drawPath(
+                path = wavePath,
                 color = color,
-                start = Offset(previousX, previousY),
-                     end = Offset(x, y),
-                     strokeWidth = 3.dp.toPx(),
-                     cap = StrokeCap.Round
+                style = Stroke(
+                    width = 3.dp.toPx(),
+                               cap = StrokeCap.Round,
+                               join = StrokeJoin.Round
+                )
             )
 
-            previousX = x
-            previousY = y
-            x += step
-        }
+            // Indicador (Círculo naranja) acoplado a la onda revertida
+            val indicatorY = centerY + amplitude * sin(((progressX / wavelength) * (2f * Math.PI).toFloat()) + phaseShift)
 
-        // Círculo naranja
-        drawCircle(
-            color = color,
-            radius = 5.dp.toPx(),
-                   center = Offset(progressX, centerY)
-        )
+            drawCircle(
+                color = color,
+                radius = 5.dp.toPx(),
+                       center = Offset(progressX, indicatorY)
+            )
+        }
     }
 }
 
@@ -287,7 +311,7 @@ fun WeatherWidgetAudio(
         Row(
             modifier = modifier
             .clip(RoundedCornerShape(60.dp))
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = 0.50f))
             .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -313,59 +337,6 @@ fun WeatherWidgetAudio(
         }
     }
 }
-
-/*@Composable
-fun WeatherWidgetAudio(
-    accent: Color,
-    isDayMode: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    val launcherViewModel: LauncherViewModel = viewModel()
-
-    val weather by launcherViewModel.weather.collectAsState()
-    val settings by launcherViewModel.settings.collectAsState()
-
-    val isMetric = settings.unitSystem.name == "METRIC"
-
-    val contentColor =
-    if (isDayMode) Color(0xFF111111)
-        else MaterialTheme.colorScheme.onBackground
-
-            val subColor =
-            if (isDayMode) Color(0xFF888888)
-                else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-
-                    weather?.let { state ->
-                        Row(
-                            modifier = modifier
-                            .clip(RoundedCornerShape(60.dp))
-                            .background(Color.Black.copy(alpha = 0.35f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = state.conditionIcon,
-                                 fontSize = 18.sp
-                            )
-
-                            Text(
-                                text = state.temperatureDisplay(isMetric),
-                                 color = contentColor,
-                                 fontSize = 18.sp,
-                                 fontWeight = FontWeight.Light
-                            )
-
-                            Text(
-                                text = state.conditionLabel.uppercase(),
-                                 color = subColor,
-                                 fontSize = 9.sp,
-                                 maxLines = 1
-                            )
-                        }
-                    }
-} */
-
 
 /**
  * Radio deck backed by a REAL tuner only — either the vendor MCU (full control,
@@ -846,7 +817,7 @@ private fun StandardMinimalPlayer(
             val currentTextColor = if (hasAlbumArt) Color.White else if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
             val currentSubTextColor = if (hasAlbumArt) Color.White.copy(alpha = 0.6f) else if (isDayMode) Color(0xFF666666) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             val currentProgressColor = if (useDarkTheme) accent else if (isDayMode) Color(0xFF111111) else accent
-            val currentProgressTrack = currentTextColor.copy(alpha = 0.15f)
+            val currentProgressTrack = currentTextColor.copy(alpha = 0.35f)
             val currentIconColor = currentTextColor.copy(alpha = 0.75f)
             val currentPlayBgColor = if (useDarkTheme) accent.copy(alpha = 0.9f) else if (isDayMode) Color(0xFF111111) else accent.copy(alpha = 0.9f)
             val currentPlayIconColor = if (useDarkTheme) Color.White else Color.Black
@@ -867,11 +838,19 @@ private fun StandardMinimalPlayer(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-                // 25% dimming layer overlay
+                // Gradient dimming layer overlay (10% top -> 25% middle -> 75% bottom)
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.25f))
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.00f), // Arriba: Casi transparente
+                                            Color.Black.copy(alpha = 0.25f), // En medio: Oscurecimiento leve
+                                            Color.Black.copy(alpha = 0.75f)  // Abajo: Muy oscuro para controles/texto
+                            )
+                        )
+                    )
                 )
             }
 
@@ -903,20 +882,6 @@ private fun StandardMinimalPlayer(
                 // Progress + controls (bottom)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     // Track info (top — clickable to open app)
-                    Box(
-                        modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(60.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .let {
-                            if (!isEditing) {
-                                it.clickable { onTapToOpenApp() }
-                            } else {
-                                it
-                            }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
@@ -938,7 +903,7 @@ private fun StandardMinimalPlayer(
                                  fontSize = 11.sp
                             )
                         }
-                    }
+
                     if (durationMs > 0) {
                         WaveProgressIndicator(
                             progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f),
@@ -968,7 +933,7 @@ private fun StandardMinimalPlayer(
                             modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.Black.copy(alpha = 0.15f))
+                            .background(Color.White.copy(alpha = 0.18f))
                             .clickable(enabled = !isEditing) { onPrev() }
                         ) {
                             Icon(Icons.Default.SkipPrevious, "Prev", tint = currentIconColor, modifier = Modifier.size(30.dp))
@@ -999,7 +964,7 @@ private fun StandardMinimalPlayer(
                             modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.Black.copy(alpha = 0.15f))
+                            .background(Color.White.copy(alpha = 0.18f))
                             .clickable(enabled = !isEditing) { onNext() }
                         ) {
                             Icon(Icons.Default.SkipNext, "Next", tint = currentIconColor, modifier = Modifier.size(30.dp))

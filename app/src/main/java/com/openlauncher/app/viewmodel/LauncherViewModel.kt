@@ -512,7 +512,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             }
-        intent?.let { 
+        intent?.let {
             runCatching {
                 app.startActivity(it)
             }.onFailure { e ->
@@ -569,28 +569,97 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             getFallbackMusicPackage(context)
         }
 
-        // Launch the app
+        // 1. Lanzar la App visualmente
         if (pkg.isNotEmpty()) {
             val intent = context.packageManager.getLaunchIntentForPackage(pkg)
             if (intent != null) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             }
+
+            // TRUCO PARA HIBERNACIÓN: Enviar un Intent directo para despertar su servicio de música subyacente
+            try {
+                val mediaIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                    `package` = pkg
+                    putExtra(Intent.EXTRA_KEY_EVENT, android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY))
+                }
+                context.sendBroadcast(mediaIntent)
+            } catch (_: Exception) {}
         }
 
-        // Start playback if not already playing
+        // 2. Controlar la reproducción forzando el despertar
         if (state?.isPlaying != true) {
+
+            // Si hay controlador, intentamos usarlo de inmediato por si acaso
             if (controller != null) {
-                controller.transportControls?.play()
-            } else {
-                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-                val eventDown = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
-                audioManager.dispatchMediaKeyEvent(eventDown)
-                val eventUp = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
-                audioManager.dispatchMediaKeyEvent(eventUp)
+                try {
+                    controller.transportControls?.play()
+                } catch (_: Exception) {}
+            }
+
+            // RESPALDÓ AGRESIVO CON RETRASO: Usamos una corrutina ligera (o un Handler)
+            // para lanzar las llaves del AudioManager 300ms después.
+            // Esto le da tiempo a la app suspendida de registrarse de nuevo en el sistema de audio.
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+
+            // Ejecutamos en el hilo principal con un leve desfase para asegurar el tiro
+            context.mainExecutor.execute {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    try {
+                        val eventDown = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                        audioManager.dispatchMediaKeyEvent(eventDown)
+                        val eventUp = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                        audioManager.dispatchMediaKeyEvent(eventUp)
+                    } catch (_: Exception) {}
+                }, 350) // 350 milisegundos son imperceptibles para el usuario pero una eternidad para el procesador
             }
         }
     }
+
+ /*   fun playLastOrOpenActive(context: Context) {
+        val state = nowPlaying.value
+        val controller = state?.controller
+        val pkg = controller?.packageName ?: MediaListenerService.lastMediaPackage.ifEmpty {
+            getFallbackMusicPackage(context)
+        }
+
+        if (pkg.isEmpty()) return
+
+            // Caso 1: Si milagrosamente el controlador existe pero no estaba reproduciendo
+            if (controller != null) {
+                if (state?.isPlaying != true) {
+                    controller.transportControls?.play()
+                }
+                return
+            }
+
+            // Caso 2: El carro se reinició (controller == null). Forzamos el despertar de la app específica.
+            try {
+                // Enviamos el comando PLAY apuntando DIRECTAMENTE a la app que queremos despertar
+                val eventDown = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                val intentDown = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                    `package` = pkg
+                    putExtra(Intent.EXTRA_KEY_EVENT, eventDown)
+                }
+                context.sendBroadcast(intentDown)
+
+                val eventUp = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                val intentUp = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                    `package` = pkg
+                    putExtra(Intent.EXTRA_KEY_EVENT, eventUp)
+                }
+                context.sendBroadcast(intentUp)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // Como respaldo absoluto (si la app estaba profundamente dormida), abrimos su interfaz
+            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                context.startActivity(intent)
+            }
+    } */
 
     // ── Weather ───────────────────────────────────────────────────────────────
     private val _weather = MutableStateFlow<WeatherState?>(null)
