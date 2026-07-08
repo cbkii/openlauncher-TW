@@ -1,0 +1,67 @@
+[
+  {
+    "path": "references/decompiled-stock-apps-filtered/deapk-filtered-no-stock-radio-music.zip",
+    "size": 17635844,
+    "sha256": "2e30a2ac8b28404635bf064bab1a1b94b04b7736c45ea6b35c0152a6556b9276"
+  },
+  {
+    "path": "references/raw/NavRadio_Plus_v4_00_PREMIUM (1).apk",
+    "size": 18153697,
+    "sha256": "b68e96efbf98da957973604dfc5aafb3dcddd00dea4dd3a70c0476826fe5a937"
+  },
+  {
+    "path": "references/raw/TS-baidu_paths.zip",
+    "size": 2425066,
+    "sha256": "17271f4c178763f005de14a00ad6295ec1e2f414161796c4883200dca1667554"
+  },
+  {
+    "path": "references/raw/TS18-props.zip",
+    "size": 7979,
+    "sha256": "bfbe6ff8cadfa8aebf8db5d7a063c980d03991785c00e8ad217296aac1c31196"
+  },
+  {
+    "path": "references/raw/TS18-root-diagnostics-20260618-151636Z.tar.gz",
+    "size": 1051742,
+    "sha256": "669b0d74f4895216126386a4497cc0b7f3eedd3a185ddf445e392985d3ca9b3b"
+  },
+  {
+    "path": "references/raw/bash-just-run.md",
+    "size": 36574,
+    "sha256": "27163a46fd525575732b738cbcfb3c2e078728269357d0d512dd2f7c77075669"
+  },
+  {
+    "path": "references/raw/chatgpt-termux-github-patch-script-guide.md",
+    "size": 24502,
+    "sha256": "47bc6b0a92370344240703adc1b752dc31104c8fb657f10252da3f624f3af488"
+  },
+  {
+    "path": "references/raw/com.dofun.variety_V9.7.2.367.260312.apk",
+    "size": 27981164,
+    "sha256": "75e7ea9b46d68754253aa385e6ac750aae957a5b72196fec5449ccf2782c60b1"
+  },
+  {
+    "path": "references/raw/combined-small.pdf",
+    "size": 3813531,
+    "sha256": "487a377cf407043d2adc4697d847b6f2b71ce95fb7e70975c235d7973a1df9c5"
+  },
+  {
+    "path": "references/raw/diagFirstROOT.zip",
+    "size": 1132972,
+    "sha256": "9c0e8be6ba8b1f03fdfbea9cf871be898be578d558e186e8299215c05bc53ca3"
+  },
+  {
+    "path": "references/raw/minidump.zip",
+    "size": 7946143,
+    "sha256": "85c076fa891f17f6b2048362a43b13a1371c4b395ab758c31fbf7d25b352b2af"
+  },
+  {
+    "path": "references/raw/python-just-run-termux.md",
+    "size": 41559,
+    "sha256": "3e149fe6331fa0aa2e31b684e93ed0e5ae4b75d9ec5b87568e4028ad1191e3f7"
+  },
+  {
+    "path": "references/raw/ts18_dofun_runtime_validation_v2_20260610_162755.tar.gz",
+    "size": 69694,
+    "sha256": "129aa7d2752664c943ea90de0cc373e0e08a583b22e813412202abd192f9264b"
+  }
+]
