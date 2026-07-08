@@ -1,5 +1,8 @@
 package com.openlauncher.app.data
 
+import com.openlauncher.app.headunit.LaunchTarget
+import java.util.UUID
+
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
@@ -59,6 +62,9 @@ class SettingsRepository(private val context: Context) {
         val SPEEDOMETER_DIGITAL_ONLY = booleanPreferencesKey("speedometer_digital_only")
         val GRADIENT_DIRECTION    = stringPreferencesKey("gradient_direction")
         val USE_CUSTOM_BG_COLOR   = booleanPreferencesKey("use_custom_bg_color")
+        val HEAD_UNIT_PROFILE_OVERRIDE = stringPreferencesKey("head_unit_profile_override")
+        val RESPECT_SAFE_AREA       = booleanPreferencesKey("respect_safe_area")
+        val LAUNCH_TARGETS          = stringPreferencesKey("launch_targets")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data
@@ -89,7 +95,7 @@ class SettingsRepository(private val context: Context) {
                 if (loaded.none { it.gridX >= 2 }) defaults.widgetLayout else loaded
             } else defaults.widgetLayout
 
-            return AppSettings(
+            var parsed = AppSettings(
                 vehicleName    = prefs[Keys.VEHICLE_NAME]     ?: defaults.vehicleName,
                 accentColor    = prefs[Keys.ACCENT_COLOR]     ?: defaults.accentColor,
                 backgroundColor = prefs[Keys.BG_COLOR]        ?: defaults.backgroundColor,
@@ -134,8 +140,27 @@ class SettingsRepository(private val context: Context) {
                 vitalsAsBars     = prefs[Keys.VITALS_AS_BARS] ?: defaults.vitalsAsBars,
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
                 gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
-                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor
+                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
+                headUnitProfileOverride= prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE]?.let { runCatching { com.openlauncher.app.headunit.HeadUnitProfile.valueOf(it) }.getOrNull() },
+                respectSafeArea        = prefs[Keys.RESPECT_SAFE_AREA] ?: true,
+                launchTargets          = parseLaunchTargets(prefs[Keys.LAUNCH_TARGETS]) ?: emptyList()
             )
+            if (parsed.launchTargets.isEmpty() && parsed.shortcuts.isNotEmpty()) {
+                val migratedTargets = parsed.shortcuts.map { shortcut ->
+                    LaunchTarget(id = UUID.randomUUID().toString(), label = shortcut.label, packageName = shortcut.packageName, iconHint = shortcut.defaultIcon.name)
+                }
+                parsed = parsed.copy(launchTargets = migratedTargets)
+            }
+            return parsed
+    }
+
+    private fun parseLaunchTargets(json: String?): List<LaunchTarget>? {
+        if (json.isNullOrEmpty()) return null
+        return try {
+            gson.fromJson(json, object : com.google.gson.reflect.TypeToken<List<LaunchTarget>>() {}.type)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun saveSettings(s: AppSettings) {
@@ -191,6 +216,9 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] = s.speedometerDigitalOnly
             prefs[Keys.GRADIENT_DIRECTION] = s.gradientDirection.name
             prefs[Keys.USE_CUSTOM_BG_COLOR] = s.useCustomBackgroundColor
+            s.headUnitProfileOverride?.let { prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE] = it.name } ?: prefs.remove(Keys.HEAD_UNIT_PROFILE_OVERRIDE)
+            prefs[Keys.RESPECT_SAFE_AREA]        = s.respectSafeArea
+            prefs[Keys.LAUNCH_TARGETS]           = gson.toJson(s.launchTargets)
     }
 
     suspend fun resetToDefaults() {

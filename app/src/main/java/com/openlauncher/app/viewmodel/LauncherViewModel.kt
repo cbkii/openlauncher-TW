@@ -24,6 +24,9 @@ import com.openlauncher.app.data.WeatherApi
 import com.openlauncher.app.data.activeWidgetIds
 import com.openlauncher.app.data.computeWidgetMove
 import com.openlauncher.app.data.defaultShortcuts
+import com.openlauncher.app.headunit.HeadUnitProfileRepository
+import com.openlauncher.app.headunit.HeadUnitProfileDetector
+import com.openlauncher.app.headunit.HeadUnitProfile
 import com.openlauncher.app.util.SunriseSunset
 import com.openlauncher.app.model.AppInfo
 import com.openlauncher.app.model.NavDestination
@@ -484,6 +487,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var radioObserver: ContentObserver? = null
 
+    private fun stopHardwareRadioObserver() {
+        radioObserver?.let { getApplication<Application>().contentResolver.unregisterContentObserver(it) }
+        radioObserver = null
+        _mcuRadio.value = null
+    }
+
     private fun startHardwareRadioObserver() {
         if (radioObserver != null) return
         _mcuRadio.value = parseRadioJson()
@@ -601,14 +610,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun launchHardwareRadioApp() {
-        if (hasSzchoicewayMcu) radioStart()
+        val effectiveProfile = headUnitProfileRepo.getEffectiveProfile()
+        if (effectiveProfile == HeadUnitProfile.Szchoiceway) {
+            radioStart()
+        }
         val pkg = settings.value.radioPackage.ifEmpty {
-            when {
-                hasSzchoicewayMcu -> "com.szchoiceway.radio"
-                else              -> radioSessionController()?.packageName ?: ""
+            when (effectiveProfile) {
+                HeadUnitProfile.Szchoiceway -> "com.szchoiceway.radio"
+                HeadUnitProfile.TopwayTs18Dofun -> {
+                    // Exclude com.tw.radio
+                    val sessionPkg = radioSessionController()?.packageName
+                    if (sessionPkg == "com.tw.radio") "" else sessionPkg ?: "com.navimods.radio"
+                }
+                else -> radioSessionController()?.packageName ?: ""
             }
         }
-        if (pkg.isNotEmpty()) {
+        if (pkg.isNotEmpty() && pkg != "com.tw.radio") {
             runCatching {
                 val intent = getApplication<Application>().packageManager
                     .getLaunchIntentForPackage(pkg)
@@ -650,10 +667,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         radioObserver = null
     }
 
+    private val headUnitProfileRepo = HeadUnitProfileRepository()
+
     init {
+        val detector = HeadUnitProfileDetector(application)
+        val (profile, evidence) = detector.detect()
+        headUnitProfileRepo.updateDetectedProfile(profile, evidence)
+
+        viewModelScope.launch {
+            settings.collect { s ->
+                headUnitProfileRepo.setOverride(s.headUnitProfileOverride)
+            }
+        }
+
         loadInstalledApps()
         refreshConnectivity()
-        if (hasSzchoicewayMcu) startHardwareRadioObserver()
+        viewModelScope.launch {
+            headUnitProfileRepo.detectedProfile.collect { profile ->
+                if (profile == HeadUnitProfile.Szchoiceway || headUnitProfileRepo.getEffectiveProfile() == HeadUnitProfile.Szchoiceway) {
+                    startHardwareRadioObserver()
+                } else {
+                    stopHardwareRadioObserver()
+                }
+            }
+        }
         // Fetch weather on first location fix, then every 30 minutes.
         // The minute ticker covers the parked case where no location updates arrive.
         viewModelScope.launch {

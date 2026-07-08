@@ -80,3 +80,10 @@ For each PR:
 - Do not claim TS18 runtime success without device validation.
 - Include fallback paths for missing components.
 - Keep non-TS18 behaviour unchanged unless a change is intentional and tested.
+
+## Update: TS18 Implementation Details
+* Added `HeadUnitProfile` and `LaunchTargetResolver`.
+* Created `TopwayTs18LaunchTargets` excluding stock radio/music.
+* Implemented OEM Safe Area respect functionality.
+* Created a lightweight `DiagnosticsScreen`.
+* Refactored radio behavior via `LauncherViewModel` and `RadioBackend` abstract approaches to never run Szchoiceway logic on TS18.

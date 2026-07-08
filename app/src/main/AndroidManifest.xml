@@ -37,6 +37,19 @@
         </intent>
     </queries>
 
+    <queries>
+        <package android:name="com.dofun.variety" />
+        <package android:name="com.dofun.carsetting" />
+        <package android:name="com.tw.bt" />
+        <package android:name="com.tw.eq" />
+        <package android:name="com.tw.auxin" />
+        <package android:name="com.tw.twfileexplore" />
+        <package android:name="com.tw.keypad" />
+        <package android:name="com.android.settings" />
+        <package android:name="com.navimods.radio" />
+        <package android:name="com.google.android.apps.maps" />
+    </queries>
+
     <application
         android:label="Open Launcher"
         android:icon="@mipmap/ic_launcher"
