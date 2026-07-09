@@ -636,7 +636,8 @@ private fun StandardMinimalPlayer(
                     contentScale = ContentScale.Crop,
                     filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
                     error = nonNullState.albumArt?.let {
-                        androidx.compose.ui.graphics.painter.BitmapPainter(it.asImageBitmap())
+                        val imageBitmap = remember(it) { it.asImageBitmap() }
+                        androidx.compose.ui.graphics.painter.BitmapPainter(imageBitmap)
                     },
                     modifier = Modifier.fillMaxSize()
                 )
