@@ -151,38 +151,46 @@ fun computeWidgetMove(
 
     val others  = layout.filter { it.id != movingId }
     val result  = mutableListOf(placed)
-    val occupied = buildOccupied(result).toMutableSet()
+    var occupiedMask = buildOccupiedMask(result)
 
     // Stable widgets that don't conflict go first; displaced ones are pushed afterwards
     val (stable, displaced) = others.partition { w -> result.none { widgetsOverlap(it, w) } }
 
     for (w in stable) {
         result.add(w)
-        for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) occupied.add(w.gridX + dx to w.gridY + dy)
+        for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) occupiedMask = occupiedMask or (1L shl ((w.gridY + dy) * GRID_COLS + (w.gridX + dx)))
     }
 
     for (w in displaced) {
-        val pos = firstFreeGridPos(w.spanX, w.spanY, occupied)
+        val pos = firstFreeGridPos(w.spanX, w.spanY, occupiedMask)
         val resolved = if (pos != null) w.copy(gridX = pos.first, gridY = pos.second) else w
         result.add(resolved)
-        for (dx in 0 until resolved.spanX) for (dy in 0 until resolved.spanY) occupied.add(resolved.gridX + dx to resolved.gridY + dy)
+        for (dx in 0 until resolved.spanX) for (dy in 0 until resolved.spanY) occupiedMask = occupiedMask or (1L shl ((resolved.gridY + dy) * GRID_COLS + (resolved.gridX + dx)))
     }
 
     return result
 }
 
-private fun buildOccupied(widgets: List<WidgetConfig>) = buildSet<Pair<Int, Int>> {
-    widgets.forEach { w -> for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) add(w.gridX + dx to w.gridY + dy) }
+private fun buildOccupiedMask(widgets: List<WidgetConfig>): Long {
+    var mask = 0L
+    widgets.forEach { w ->
+        for (dx in 0 until w.spanX) {
+            for (dy in 0 until w.spanY) {
+                mask = mask or (1L shl ((w.gridY + dy) * GRID_COLS + (w.gridX + dx)))
+            }
+        }
+    }
+    return mask
 }
 
 private fun widgetsOverlap(a: WidgetConfig, b: WidgetConfig): Boolean =
     a.gridX < b.gridX + b.spanX && a.gridX + a.spanX > b.gridX &&
     a.gridY < b.gridY + b.spanY && a.gridY + a.spanY > b.gridY
 
-private fun firstFreeGridPos(spanX: Int, spanY: Int, occupied: Set<Pair<Int, Int>>): Pair<Int, Int>? {
+private fun firstFreeGridPos(spanX: Int, spanY: Int, occupiedMask: Long): Pair<Int, Int>? {
     for (row in 0 until GRID_ROWS) for (col in 0 until GRID_COLS) {
         if (col + spanX > GRID_COLS || row + spanY > GRID_ROWS) continue
-        if ((0 until spanX).all { dx -> (0 until spanY).all { dy -> (col + dx to row + dy) !in occupied } })
+        if ((0 until spanX).all { dx -> (0 until spanY).all { dy -> (occupiedMask and (1L shl ((row + dy) * GRID_COLS + (col + dx)))) == 0L } })
             return col to row
     }
     return null
