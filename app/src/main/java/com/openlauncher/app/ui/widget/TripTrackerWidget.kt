@@ -82,7 +82,7 @@ fun TripTrackerWidget(
             while (accelState == "RUNNING") {
                 val elapsed = android.os.SystemClock.elapsedRealtime() - accelStartTime
                 accelTimeDisplay = "%.2fs".format(elapsed / 1000f)
-                delay(30)
+                androidx.compose.runtime.withFrameMillis { }
             }
         } else if (accelState == "COMPLETE") {
             accelTimeDisplay = "%.2fs".format((accelEndTime - accelStartTime) / 1000f)
@@ -121,7 +121,7 @@ fun TripTrackerWidget(
             val simTarget = if (isMetric) 100f else 60f
             simSpeed = 0f
             while (simSpeed < simTarget + 5f && isSimulating && accelState == "RUNNING") {
-                delay(30)
+                androidx.compose.runtime.withFrameMillis { }
                 val elapsed = (android.os.SystemClock.elapsedRealtime() - accelStartTime) / 1000f
                 simSpeed = elapsed * elapsed * 2.8f + elapsed * 8f
                 if (simSpeed >= simTarget) {
