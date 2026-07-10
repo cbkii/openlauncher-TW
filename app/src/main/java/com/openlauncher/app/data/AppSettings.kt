@@ -157,39 +157,29 @@ fun computeWidgetMove(
 
     val others  = layout.filter { it.id != movingId }
     val result  = mutableListOf(placed)
-    val occupied = buildOccupied(result).toMutableSet()
+    var occupiedMask = GridUtils.buildOccupiedMask(result)
 
     // Stable widgets that don't conflict go first; displaced ones are pushed afterwards
     val (stable, displaced) = others.partition { w -> result.none { widgetsOverlap(it, w) } }
 
     for (w in stable) {
         result.add(w)
-        for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) occupied.add(w.gridX + dx to w.gridY + dy)
+        occupiedMask = occupiedMask or GridUtils.getWidgetMask(w)
     }
 
     for (w in displaced) {
-        val pos = firstFreeGridPos(w.spanX, w.spanY, occupied)
+        val pos = GridUtils.firstFreeGridPos(w.spanX, w.spanY, occupiedMask)
         val resolved = if (pos != null) w.copy(gridX = pos.first, gridY = pos.second) else w
         result.add(resolved)
-        for (dx in 0 until resolved.spanX) for (dy in 0 until resolved.spanY) occupied.add(resolved.gridX + dx to resolved.gridY + dy)
+        occupiedMask = occupiedMask or GridUtils.getWidgetMask(resolved)
     }
 
     return result
 }
 
-private fun buildOccupied(widgets: List<WidgetConfig>) = buildSet<Pair<Int, Int>> {
-    widgets.forEach { w -> for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) add(w.gridX + dx to w.gridY + dy) }
-}
+
 
 private fun widgetsOverlap(a: WidgetConfig, b: WidgetConfig): Boolean =
     a.gridX < b.gridX + b.spanX && a.gridX + a.spanX > b.gridX &&
     a.gridY < b.gridY + b.spanY && a.gridY + a.spanY > b.gridY
 
-private fun firstFreeGridPos(spanX: Int, spanY: Int, occupied: Set<Pair<Int, Int>>): Pair<Int, Int>? {
-    for (row in 0 until GRID_ROWS) for (col in 0 until GRID_COLS) {
-        if (col + spanX > GRID_COLS || row + spanY > GRID_ROWS) continue
-        if ((0 until spanX).all { dx -> (0 until spanY).all { dy -> (col + dx to row + dy) !in occupied } })
-            return col to row
-    }
-    return null
-}

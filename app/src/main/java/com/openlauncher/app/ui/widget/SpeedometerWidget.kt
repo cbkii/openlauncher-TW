@@ -15,8 +15,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.openlauncher.app.util.LocationData
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+
+private val DEGREES_TO_RADIANS = (PI / 180.0).toFloat()
 
 @Composable
 fun SpeedometerWidget(
@@ -101,7 +104,7 @@ fun SpeedometerWidget(
 
                 for (i in 0..10) {
                     val angle   = startAngle + i * (sweepTotal / 10f)
-                    val rad     = Math.toRadians(angle.toDouble())
+                    val rad     = angle * DEGREES_TO_RADIANS
                     val isMajor = i % 2 == 0
                     val outerR  = arcR - trackW / 2f - 3.dp.toPx()
                     val innerR  = outerR - if (isMajor) 7.dp.toPx() else 4.dp.toPx()

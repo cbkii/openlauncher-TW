@@ -3,6 +3,7 @@ package com.openlauncher.app.ui.screen
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -40,6 +41,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.openlauncher.app.ui.components.ColorPickerDialog
 import com.openlauncher.app.ui.components.ConfirmDialog
+
+private const val TAG = "SettingsScreen"
 
 // Resolved at call site via LocalDayMode — see SettingsDivider / SettingsSection
 
@@ -710,7 +713,7 @@ fun SettingsScreen(
                         lm.sendExtraCommand(android.location.LocationManager.GPS_PROVIDER, "force_xtra_injection", null)
                         lm.sendExtraCommand(android.location.LocationManager.GPS_PROVIDER, "force_time_injection", null)
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "Failed to reset or refresh A-GPS assistance data", e)
                     }
 
                     calibrationStatus = if (success) {
