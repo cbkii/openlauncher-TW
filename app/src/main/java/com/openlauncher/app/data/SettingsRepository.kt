@@ -1,14 +1,12 @@
 package com.openlauncher.app.data
 
-import com.openlauncher.app.headunit.LaunchTarget
-import java.util.UUID
-
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.openlauncher.app.headunit.LaunchTarget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -95,7 +93,14 @@ class SettingsRepository(private val context: Context) {
                 if (loaded.none { it.gridX >= 2 }) defaults.widgetLayout else loaded
             } else defaults.widgetLayout
 
-            var parsed = AppSettings(
+            val storedLaunchTargets = prefs[Keys.LAUNCH_TARGETS]
+            val launchTargets = if (storedLaunchTargets == null) {
+                migrateShortcutsToLaunchTargets(shortcuts)
+            } else {
+                parseLaunchTargets(storedLaunchTargets)
+            }
+
+            return AppSettings(
                 vehicleName    = prefs[Keys.VEHICLE_NAME]     ?: defaults.vehicleName,
                 accentColor    = prefs[Keys.ACCENT_COLOR]     ?: defaults.accentColor,
                 backgroundColor = prefs[Keys.BG_COLOR]        ?: defaults.backgroundColor,
@@ -141,29 +146,17 @@ class SettingsRepository(private val context: Context) {
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
                 gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
                 useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
-                headUnitProfileOverride= prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE]?.let { runCatching { com.openlauncher.app.headunit.HeadUnitProfile.valueOf(it) }.getOrNull() },
+                headUnitProfileOverride = prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE]?.let { runCatching { com.openlauncher.app.headunit.HeadUnitProfile.valueOf(it) }.getOrNull() },
                 respectSafeArea        = prefs[Keys.RESPECT_SAFE_AREA] ?: true,
-                launchTargets          = parseLaunchTargets(prefs) ?: emptyList()
+                launchTargets          = launchTargets
             )
-            if (parsed.launchTargets.isEmpty() && parsed.shortcuts.isNotEmpty()) {
-                val migratedTargets = parsed.shortcuts.map { shortcut ->
-                    LaunchTarget(id = UUID.randomUUID().toString(), label = shortcut.label, packageName = shortcut.packageName, iconHint = shortcut.defaultIcon.name)
-                }
-                parsed = parsed.copy(launchTargets = migratedTargets)
-            }
-            return parsed
     }
 
-
-
-    private fun parseLaunchTargets(prefs: androidx.datastore.preferences.core.Preferences): List<LaunchTarget>? {
-        val json = prefs[Keys.LAUNCH_TARGETS]
-        if (json.isNullOrEmpty()) return null
-        return try {
+    private fun parseLaunchTargets(json: String): List<LaunchTarget> {
+        if (json.isEmpty()) return emptyList()
+        return runCatching {
             gson.fromJson(json, object : com.google.gson.reflect.TypeToken<List<LaunchTarget>>() {}.type)
-        } catch (e: Exception) {
-            null
-        }
+        }.getOrNull() ?: emptyList()
     }
 
     suspend fun saveSettings(s: AppSettings) {
@@ -228,3 +221,14 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it.clear() }
     }
 }
+
+internal fun migrateShortcutsToLaunchTargets(shortcuts: List<ShortcutConfig>): List<LaunchTarget> =
+    shortcuts.mapIndexed { index, shortcut ->
+        LaunchTarget(
+            id = "legacy-shortcut-$index",
+            label = shortcut.label,
+            packageName = shortcut.packageName.takeIf { it.isNotBlank() },
+            iconHint = shortcut.defaultIcon.name,
+            notes = "Migrated from the package-only shortcut at slot $index."
+        )
+    }
