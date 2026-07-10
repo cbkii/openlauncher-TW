@@ -5,3 +5,11 @@ data class HeadUnitEvidence(
     val isPresent: Boolean,
     val details: String? = null
 )
+
+enum class DetectionConfidence { NONE, LOW, MEDIUM, HIGH }
+
+data class HeadUnitDetection(
+    val profile: HeadUnitProfile,
+    val confidence: DetectionConfidence,
+    val evidence: List<HeadUnitEvidence>
+)
