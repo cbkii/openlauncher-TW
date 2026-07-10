@@ -1,13 +1,15 @@
 package com.openlauncher.app.headunit
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.content.ComponentName
 
 class LaunchTargetResolver(private val context: Context) {
 
-    fun resolve(target: LaunchTarget): Intent? {
+    fun resolve(target: LaunchTarget, effectiveProfile: HeadUnitProfile): Intent? {
+        if (!target.supportsProfile(effectiveProfile)) return null
+
         val pm = context.packageManager
 
         // 1. Explicit component
@@ -56,7 +58,6 @@ class LaunchTargetResolver(private val context: Context) {
         return null
     }
 
-    fun isAvailable(target: LaunchTarget): Boolean {
-        return resolve(target) != null
-    }
+    fun isAvailable(target: LaunchTarget, effectiveProfile: HeadUnitProfile): Boolean =
+        resolve(target, effectiveProfile) != null
 }
