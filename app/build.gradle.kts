@@ -80,3 +80,7 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+}

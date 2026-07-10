@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.openlauncher.app.util.LocationData
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.withFrameMillis
 
 @Composable
 fun TripTrackerWidget(
@@ -80,9 +81,10 @@ fun TripTrackerWidget(
     LaunchedEffect(accelState, accelStartTime) {
         if (accelState == "RUNNING") {
             while (accelState == "RUNNING") {
-                val elapsed = android.os.SystemClock.elapsedRealtime() - accelStartTime
-                accelTimeDisplay = "%.2fs".format(elapsed / 1000f)
-                androidx.compose.runtime.withFrameMillis { }
+                withFrameMillis {
+                    val elapsed = android.os.SystemClock.elapsedRealtime() - accelStartTime
+                    accelTimeDisplay = "%.2fs".format(elapsed / 1000f)
+                }
             }
         } else if (accelState == "COMPLETE") {
             accelTimeDisplay = "%.2fs".format((accelEndTime - accelStartTime) / 1000f)
@@ -120,16 +122,19 @@ fun TripTrackerWidget(
             accelState = "RUNNING"
             val simTarget = if (isMetric) 100f else 60f
             simSpeed = 0f
-            while (simSpeed < simTarget + 5f && isSimulating && accelState == "RUNNING") {
-                androidx.compose.runtime.withFrameMillis { }
-                val elapsed = (android.os.SystemClock.elapsedRealtime() - accelStartTime) / 1000f
-                simSpeed = elapsed * elapsed * 2.8f + elapsed * 8f
-                if (simSpeed >= simTarget) {
-                    accelEndTime = android.os.SystemClock.elapsedRealtime()
-                    accelState = "COMPLETE"
-                    val finalTime = (accelEndTime - accelStartTime) / 1000f
-                    bestAccelTime = if (bestAccelTime == null) finalTime else minOf(bestAccelTime!!, finalTime)
-                    break
+            while (simSpeed < simTarget && isSimulating && accelState == "RUNNING") {
+                withFrameMillis {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    val elapsed = (now - accelStartTime) / 1000f
+                    val newSimSpeed = TripTrackerLogic.calculateSimulationSpeed(elapsed)
+                    simSpeed = newSimSpeed
+
+                    if (newSimSpeed >= simTarget) {
+                        accelEndTime = now
+                        accelState = "COMPLETE"
+                        val finalTime = (now - accelStartTime) / 1000f
+                        bestAccelTime = if (bestAccelTime == null) finalTime else minOf(bestAccelTime!!, finalTime)
+                    }
                 }
             }
             isSimulating = false
@@ -639,3 +644,9 @@ private fun TeTactileButton(
     }
 }
 
+
+object TripTrackerLogic {
+    fun calculateSimulationSpeed(elapsedSeconds: Float): Float {
+        return elapsedSeconds * elapsedSeconds * 2.8f + elapsedSeconds * 8f
+    }
+}
