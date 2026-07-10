@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class HeadUnitProfileRepository {
+class HeadUnitProfileRepository(private val context: android.content.Context) {
     private val _detectedProfile = MutableStateFlow(HeadUnitProfile.StandardAndroid)
     val detectedProfile: StateFlow<HeadUnitProfile> = _detectedProfile.asStateFlow()
 

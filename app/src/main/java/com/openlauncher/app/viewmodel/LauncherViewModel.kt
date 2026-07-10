@@ -620,7 +620,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 HeadUnitProfile.TopwayTs18Dofun -> {
                     // Exclude com.tw.radio
                     val sessionPkg = radioSessionController()?.packageName
-                    if (sessionPkg == "com.tw.radio") "" else sessionPkg ?: "com.navimods.radio"
+                    if (sessionPkg == "com.tw.radio") "com.navimods.radio" else sessionPkg ?: "com.navimods.radio"
                 }
                 else -> radioSessionController()?.packageName ?: ""
             }
@@ -667,7 +667,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         radioObserver = null
     }
 
-    private val headUnitProfileRepo = HeadUnitProfileRepository()
+    private val headUnitProfileRepo = HeadUnitProfileRepository(application)
 
     init {
         val detector = HeadUnitProfileDetector(application)
@@ -683,8 +683,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         loadInstalledApps()
         refreshConnectivity()
         viewModelScope.launch {
-            headUnitProfileRepo.detectedProfile.collect { profile ->
-                if (profile == HeadUnitProfile.Szchoiceway || headUnitProfileRepo.getEffectiveProfile() == HeadUnitProfile.Szchoiceway) {
+            headUnitProfileRepo.profileOverride.collect { override ->
+                if (headUnitProfileRepo.getEffectiveProfile() == HeadUnitProfile.Szchoiceway) {
                     startHardwareRadioObserver()
                 } else {
                     stopHardwareRadioObserver()

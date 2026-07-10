@@ -143,7 +143,7 @@ class SettingsRepository(private val context: Context) {
                 useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
                 headUnitProfileOverride= prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE]?.let { runCatching { com.openlauncher.app.headunit.HeadUnitProfile.valueOf(it) }.getOrNull() },
                 respectSafeArea        = prefs[Keys.RESPECT_SAFE_AREA] ?: true,
-                launchTargets          = parseLaunchTargets(prefs[Keys.LAUNCH_TARGETS]) ?: emptyList()
+                launchTargets          = parseLaunchTargets(prefs) ?: emptyList()
             )
             if (parsed.launchTargets.isEmpty() && parsed.shortcuts.isNotEmpty()) {
                 val migratedTargets = parsed.shortcuts.map { shortcut ->
@@ -154,7 +154,10 @@ class SettingsRepository(private val context: Context) {
             return parsed
     }
 
-    private fun parseLaunchTargets(json: String?): List<LaunchTarget>? {
+
+
+    private fun parseLaunchTargets(prefs: androidx.datastore.preferences.core.Preferences): List<LaunchTarget>? {
+        val json = prefs[Keys.LAUNCH_TARGETS]
         if (json.isNullOrEmpty()) return null
         return try {
             gson.fromJson(json, object : com.google.gson.reflect.TypeToken<List<LaunchTarget>>() {}.type)
