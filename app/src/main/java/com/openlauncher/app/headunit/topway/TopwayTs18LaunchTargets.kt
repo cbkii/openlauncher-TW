@@ -75,12 +75,46 @@ object TopwayTs18LaunchTargets {
             notes = "DoFun car settings."
         ),
         LaunchTarget(
+            id = "android_settings",
+            label = "Android Settings",
+            packageName = "com.android.settings",
+            className = "com.android.settings.Settings",
+            iconHint = "SETTINGS",
+            requiredProfile = HeadUnitProfile.TopwayTs18Dofun,
+            notes = "Public Android settings fallback."
+        ),
+        LaunchTarget(
+            id = "keypad_settings",
+            label = "Steering Wheel Keys",
+            packageName = "com.tw.keypad",
+            className = "com.tw.keypad.SteeringWheelActivity",
+            iconHint = "SETTINGS",
+            requiredProfile = HeadUnitProfile.TopwayTs18Dofun,
+            notes = "Requires device validation; unavailable components remain visible in diagnostics."
+        ),
+        LaunchTarget(
             id = "dofun_setting",
             label = "DoFun Setting",
             uri = "launcher://variety/setting",
             iconHint = "SETTINGS",
             requiredProfile = HeadUnitProfile.TopwayTs18Dofun,
             notes = "DoFun theme/settings URI."
+        ),
+        LaunchTarget(
+            id = "dofun_theme_one",
+            label = "DoFun Theme Category One",
+            uri = "launcher://variety/theme/category/one",
+            iconHint = "SETTINGS",
+            requiredProfile = HeadUnitProfile.TopwayTs18Dofun,
+            notes = "Requires device validation; resolved before display/use."
+        ),
+        LaunchTarget(
+            id = "dofun_theme_two",
+            label = "DoFun Theme Category Two",
+            uri = "launcher://variety/theme/category/two",
+            iconHint = "SETTINGS",
+            requiredProfile = HeadUnitProfile.TopwayTs18Dofun,
+            notes = "Requires device validation; resolved before display/use."
         )
     )
 }
