@@ -16,6 +16,8 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val RADIANS_TO_DEGREES = (180.0 / PI).toFloat()
+
 data class LocationData(
     val latitude: Double,
     val longitude: Double,

@@ -19,6 +19,8 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val DEGREES_TO_RADIANS = (PI / 180.0).toFloat()
+
 @Composable
 fun SpeedometerWidget(
     location: LocationData?,
@@ -102,7 +104,7 @@ fun SpeedometerWidget(
 
                 for (i in 0..10) {
                     val angle   = startAngle + i * (sweepTotal / 10f)
-                    val rad     = angle * (PI.toFloat() / 180f)
+                    val rad     = angle * DEGREES_TO_RADIANS
                     val isMajor = i % 2 == 0
                     val outerR  = arcR - trackW / 2f - 3.dp.toPx()
                     val innerR  = outerR - if (isMajor) 7.dp.toPx() else 4.dp.toPx()
