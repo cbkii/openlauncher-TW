@@ -35,19 +35,23 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-    </queries>
-
-    <queries>
+        <!-- Public package-visibility evidence and safe launch candidates. -->
+        <package android:name="com.android.settings" />
         <package android:name="com.dofun.variety" />
         <package android:name="com.dofun.carsetting" />
-        <package android:name="com.tw.bt" />
-        <package android:name="com.tw.eq" />
-        <package android:name="com.tw.auxin" />
-        <package android:name="com.tw.twfileexplore" />
-        <package android:name="com.tw.keypad" />
-        <package android:name="com.android.settings" />
-        <package android:name="com.navimods.radio" />
         <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.navimods.radio" />
+        <package android:name="com.szchoiceway.eventcenter" />
+        <package android:name="com.szchoiceway.radio" />
+        <package android:name="com.tw.auxin" />
+        <package android:name="com.tw.bt" />
+        <package android:name="com.tw.carinfoservice" />
+        <package android:name="com.tw.core" />
+        <package android:name="com.tw.coreservice" />
+        <package android:name="com.tw.eq" />
+        <package android:name="com.tw.keypad" />
+        <package android:name="com.tw.service" />
+        <package android:name="com.tw.twfileexplore" />
     </queries>
 
     <application
@@ -56,7 +60,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:hardwareAccelerated="true"
-        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+        android:theme="@android:style/Theme.Black.NoTitleBar"
         android:exported="true">
 
         <!-- Single launcher activity -->
