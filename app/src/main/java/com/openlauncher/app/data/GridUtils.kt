@@ -1,7 +1,7 @@
 package com.openlauncher.app.data
 
 object GridUtils {
-    const val MAX_CELLS = 64
+    const val MAX_CELLS = Long.SIZE_BITS
 
     init {
         require(GRID_COLS * GRID_ROWS <= MAX_CELLS) {
@@ -25,6 +25,8 @@ object GridUtils {
      * Returns a Long bitmask for a single widget, bounded to the grid.
      */
     fun getWidgetMask(w: WidgetConfig): Long {
+        if (w.spanX <= 0 || w.spanY <= 0) return 0L
+
         var mask = 0L
         for (dy in 0 until w.spanY) {
             val y = w.gridY + dy
@@ -38,15 +40,11 @@ object GridUtils {
         return mask
     }
 
-    fun getSpanMask(col: Int, row: Int, spanX: Int, spanY: Int): Long {
+    private fun getOriginSpanMask(spanX: Int, spanY: Int): Long {
         var mask = 0L
         for (dy in 0 until spanY) {
-            val y = row + dy
-            if (y !in 0 until GRID_ROWS) continue
             for (dx in 0 until spanX) {
-                val x = col + dx
-                if (x !in 0 until GRID_COLS) continue
-                mask = mask or (1L shl (y * GRID_COLS + x))
+                mask = mask or (1L shl (dy * GRID_COLS + dx))
             }
         }
         return mask
@@ -56,9 +54,13 @@ object GridUtils {
      * Returns the first free grid position (col to row) that can fit a widget with the given spans.
      */
     fun firstFreeGridPos(spanX: Int, spanY: Int, occupiedMask: Long): Pair<Int, Int>? {
-        for (row in 0..GRID_ROWS - spanY) {
-            for (col in 0..GRID_COLS - spanX) {
-                val spanMask = getSpanMask(col, row, spanX, spanY)
+        if (spanX !in 1..GRID_COLS || spanY !in 1..GRID_ROWS) return null
+
+        val originMask = getOriginSpanMask(spanX, spanY)
+        for (row in 0..(GRID_ROWS - spanY)) {
+            for (col in 0..(GRID_COLS - spanX)) {
+                val shift = row * GRID_COLS + col
+                val spanMask = originMask shl shift
                 if ((occupiedMask and spanMask) == 0L) {
                     return col to row
                 }
@@ -72,7 +74,7 @@ object GridUtils {
      */
     fun getFullGridMask(): Long {
         val cells = GRID_COLS * GRID_ROWS
-        if (cells >= 64) {
+        if (cells == Long.SIZE_BITS) {
             return -1L
         }
         return (1L shl cells) - 1L
