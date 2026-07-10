@@ -7,7 +7,7 @@ import org.junit.Test
 class GridUtilsTest {
     @Test
     fun fullGridMask_coversEveryConfiguredCell() {
-        assertEquals(0b11_1111L, GridUtils.getFullGridMask())
+        val cells = GRID_COLS * GRID_ROWS\n        val expected = if (cells == Long.SIZE_BITS) -1L else (1L shl cells) - 1L\n\n        assertEquals(expected, GridUtils.getFullGridMask())
     }
 
     @Test
