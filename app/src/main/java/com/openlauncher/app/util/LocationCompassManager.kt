@@ -62,7 +62,7 @@ class LocationCompassManager(context: Context) {
                 bearingSin = alpha * sin(azimuthRad) + (1f - alpha) * bearingSin
                 bearingCos = alpha * cos(azimuthRad) + (1f - alpha) * bearingCos
 
-                val bearingDegrees = atan2(bearingSin, bearingCos) * (180f / PI.toFloat())
+                val bearingDegrees = atan2(bearingSin, bearingCos) * 57.29578f
                 _bearing.value = (bearingDegrees + 360f) % 360f
             }
         }
