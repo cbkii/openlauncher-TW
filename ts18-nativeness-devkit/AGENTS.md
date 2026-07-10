@@ -82,8 +82,8 @@ For each PR:
 - Keep non-TS18 behaviour unchanged unless a change is intentional and tested.
 
 ## Update: TS18 Implementation Details
-* Added `HeadUnitProfile` and `LaunchTargetResolver`.
-* Created `TopwayTs18LaunchTargets` excluding stock radio/music.
-* Implemented OEM Safe Area respect functionality.
-* Created a lightweight `DiagnosticsScreen`.
-* Refactored radio behavior via `LauncherViewModel` and `RadioBackend` abstract approaches to never run Szchoiceway logic on TS18.
+* Added evidence-based `HeadUnitProfile` detection with an effective-profile override flow.
+* Created `TopwayTs18LaunchTargets` excluding stock radio/music and resolving every target before use.
+* Added runtime-inset safe-area handling that remains user-configurable.
+* Added a user-visible diagnostics screen with local JSON sharing and target availability.
+* Profile-gated the existing Szchoiceway observer so it is never treated as a TS18 backend.
