@@ -277,20 +277,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         spanX: Int,
         spanY: Int
     ): Pair<Int, Int>? {
-        var occupiedMask = 0L
-        layout.filter { it.enabled && it.id in activeIds }.forEach { w ->
-            for (dx in 0 until w.spanX) {
-                for (dy in 0 until w.spanY) {
-                    occupiedMask = occupiedMask or (1L shl ((w.gridY + dy) * GRID_COLS + (w.gridX + dx)))
-                }
-            }
-        }
-        for (row in 0 until GRID_ROWS) for (col in 0 until GRID_COLS) {
-            if (col + spanX > GRID_COLS || row + spanY > GRID_ROWS) continue
-            if ((0 until spanX).all { dx -> (0 until spanY).all { dy -> (occupiedMask and (1L shl ((row + dy) * GRID_COLS + (col + dx)))) == 0L } })
-                return col to row
-        }
-        return null
+        val occupiedMask = com.openlauncher.app.data.GridUtils.buildOccupiedMask(layout.filter { it.enabled && it.id in activeIds })
+        return com.openlauncher.app.data.GridUtils.firstFreeGridPos(spanX, spanY, occupiedMask)
     }
 
     fun cancelCarPlayPicker() {

@@ -4,9 +4,6 @@ plugins {
 }
 
 android {
-    lint {
-        abortOnError = false
-    }
     namespace  = "com.openlauncher.app"
     compileSdk {
         version = release(36) { minorApiLevel = 1 }
@@ -82,6 +79,9 @@ dependencies {
     implementation("com.google.code.gson:gson:2.13.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    "testImplementation"("junit:junit:4.13.2")
+    testImplementation("junit:junit:4.13.2")
+
+}
 
     testImplementation("junit:junit:4.13.2")
-}
