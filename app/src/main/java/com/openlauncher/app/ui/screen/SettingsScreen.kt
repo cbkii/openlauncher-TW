@@ -49,6 +49,7 @@ fun SettingsScreen(
     accent: Color,
     onUpdate: (AppSettings.() -> AppSettings) -> Unit,
     onReset: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -317,7 +318,12 @@ fun SettingsScreen(
 
             SettingsDivider()
             SettingsRow(label = "Head Unit Profile Override", sublabel = settings.headUnitProfileOverride?.name ?: "Auto Detect", icon = Icons.Default.DirectionsCar) {
-                val profiles = HeadUnitProfile.values().map { it.name }.toMutableList().apply { add(0, "Auto Detect") }
+                val profiles = listOf(
+                    "Auto Detect",
+                    HeadUnitProfile.StandardAndroid.name,
+                    HeadUnitProfile.TopwayTs18Dofun.name,
+                    HeadUnitProfile.Szchoiceway.name
+                )
                 val current = settings.headUnitProfileOverride?.name ?: "Auto Detect"
                 val idx = profiles.indexOf(current)
                 val next = if (idx < profiles.size - 1) profiles[idx + 1] else profiles[0]
@@ -326,6 +332,13 @@ fun SettingsScreen(
             }
             SettingsRow(label = "Respect OEM Safe Area", sublabel = if (settings.respectSafeArea) "Yes" else "No", icon = Icons.Default.AspectRatio) {
                 onUpdate { copy(respectSafeArea = !settings.respectSafeArea) }
+            }
+            SettingsRow(
+                label = "Head Unit Diagnostics",
+                sublabel = "Detection evidence, insets and launch targets",
+                icon = Icons.Default.BugReport
+            ) {
+                TextButton(onClick = onOpenDiagnostics) { Text("Open") }
             }
 
 
