@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -55,12 +56,14 @@ class LocationCompassManager(context: Context) {
             if (SensorManager.getRotationMatrix(r, i, gravity, geomagnetic)) {
                 val orientation = FloatArray(3)
                 SensorManager.getOrientation(r, orientation)
-                val azimuthRad = orientation[0].toDouble()
+                val azimuthRad = orientation[0]
                 // Circular low-pass filter — correctly handles 0°/360° wrap-around
                 val alpha = 0.10f
-                bearingSin = alpha * sin(azimuthRad).toFloat() + (1f - alpha) * bearingSin
-                bearingCos = alpha * cos(azimuthRad).toFloat() + (1f - alpha) * bearingCos
-                _bearing.value = ((Math.toDegrees(atan2(bearingSin.toDouble(), bearingCos.toDouble())) + 360) % 360).toFloat()
+                bearingSin = alpha * sin(azimuthRad) + (1f - alpha) * bearingSin
+                bearingCos = alpha * cos(azimuthRad) + (1f - alpha) * bearingCos
+
+                val bearingDegrees = atan2(bearingSin, bearingCos) * (180f / PI.toFloat())
+                _bearing.value = (bearingDegrees + 360f) % 360f
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

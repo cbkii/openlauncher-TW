@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.io.File
 
+private const val BYTES_PER_GIB = 1024.0 * 1024.0 * 1024.0
+
 @Composable
 fun VitalsWidget(
     accent: Color,
@@ -94,8 +96,8 @@ fun VitalsWidget(
             val memInfo = ActivityManager.MemoryInfo()
             am.getMemoryInfo(memInfo)
             
-            val availGb = memInfo.availMem.toDouble() / (1024.0 * 1024.0 * 1024.0)
-            val totalGb = memInfo.totalMem.toDouble() / (1024.0 * 1024.0 * 1024.0)
+            val availGb = memInfo.availMem.toDouble() / BYTES_PER_GIB
+            val totalGb = memInfo.totalMem.toDouble() / BYTES_PER_GIB
             val usedGb = totalGb - availGb
             
             ramUsedPercent = ((usedGb / totalGb) * 100f).toFloat().coerceIn(0f, 100f)
