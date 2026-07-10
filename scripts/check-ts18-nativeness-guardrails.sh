@@ -35,8 +35,7 @@ fi
 
 if [ $FAILED -eq 1 ]; then
     echo "Guardrails failed."
-    # We won't call exit 1 here so bash doesn't crash the session runner,
-    # but we'll print failure.
+    exit 1
 else
     echo "PASS: TS18 nativeness guardrails passed."
 fi
