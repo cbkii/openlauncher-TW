@@ -23,6 +23,8 @@ object GridUtils {
 
     /**
      * Returns a Long bitmask for a single widget, bounded to the grid.
+     * Invalid legacy spans produce an empty mask so corrupt persisted state cannot
+     * alias another cell or crash launcher startup. Placement APIs reject them.
      */
     fun getWidgetMask(w: WidgetConfig): Long {
         if (w.spanX <= 0 || w.spanY <= 0) return 0L
