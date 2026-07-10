@@ -624,6 +624,12 @@ private fun StandardMinimalPlayer(
             val currentPlayBgColor = if (useDarkTheme) accent.copy(alpha = 0.9f) else if (isDayMode) Color(0xFF111111) else accent.copy(alpha = 0.9f)
             val currentPlayIconColor = if (useDarkTheme) Color.Black else Color.White
 
+            val fallbackPainter = remember(nonNullState.albumArt) {
+                nonNullState.albumArt?.let {
+                    androidx.compose.ui.graphics.painter.BitmapPainter(it.asImageBitmap())
+                }
+            }
+
             if (hasAlbumArt) {
                 // Prefer the full-resolution art URI when the source app provides
                 // one — the metadata bitmap is often a downscaled notification
@@ -635,10 +641,7 @@ private fun StandardMinimalPlayer(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-                    error = nonNullState.albumArt?.let {
-                        val imageBitmap = remember(it) { it.asImageBitmap() }
-                        androidx.compose.ui.graphics.painter.BitmapPainter(imageBitmap)
-                    },
+                    error = fallbackPainter,
                     modifier = Modifier.fillMaxSize()
                 )
                 // 25% dimming layer overlay
