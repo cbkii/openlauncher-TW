@@ -80,14 +80,8 @@ private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boole
         if (settings.showSoundboard) add("SOUNDBOARD")
     }
     val activeWidgets = settings.widgetLayout.filter { it.enabled && it.id in visibleIds }
-    val occupied = buildSet<Pair<Int, Int>> {
-        activeWidgets.forEach { w ->
-            for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) add(w.gridX + dx to w.gridY + dy)
-        }
-    }
-    val hasFreeCell = (0 until com.openlauncher.app.data.GRID_ROWS).any { r ->
-        (0 until com.openlauncher.app.data.GRID_COLS).any { c -> (c to r) !in occupied }
-    }
+    val occupiedMask = com.openlauncher.app.data.GridUtils.buildOccupiedMask(activeWidgets)
+    val hasFreeCell = (occupiedMask and com.openlauncher.app.data.GridUtils.getFullGridMask()) != com.openlauncher.app.data.GridUtils.getFullGridMask()
     // Also true if any active widget spans >1 cell and can be shrunk to make room
     val hasShrinkable = activeWidgets.any { it.spanX * it.spanY > 1 }
     return hasFreeCell || hasShrinkable
