@@ -1,6 +1,7 @@
 package com.openlauncher.app
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,12 +27,14 @@ import com.openlauncher.app.data.GradientDirection
 import com.openlauncher.app.model.NavDestination
 import com.openlauncher.app.ui.components.Sidebar
 import com.openlauncher.app.ui.screen.*
+import com.openlauncher.app.ui.screen.diagnostics.DiagnosticsScreen
 import com.openlauncher.app.ui.theme.OpenLauncherTheme
 import com.openlauncher.app.viewmodel.LauncherViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val vm: LauncherViewModel by viewModels()
+    private var respectOemSafeArea = true
 
     private val locationPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -42,22 +45,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun hideSystemBars() {
+    private fun applySystemBarPolicy() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
+            if (respectOemSafeArea) {
+                show(WindowInsetsCompat.Type.systemBars())
+            } else {
+                hide(WindowInsetsCompat.Type.systemBars())
+            }
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 
+    private fun shareDiagnostics(json: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_SUBJECT, "OpenLauncher-TW head unit diagnostics")
+            putExtra(Intent.EXTRA_TEXT, json)
+        }
+        startActivity(Intent.createChooser(intent, "Share diagnostics"))
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideSystemBars()
+        if (hasFocus) applySystemBarPolicy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        hideSystemBars()
+        applySystemBarPolicy()
 
         setContent {
             val settingsLoaded by vm.settingsLoaded.collectAsStateWithLifecycle()
@@ -77,6 +93,11 @@ class MainActivity : ComponentActivity() {
             val isDayMode = if (settings.dayNightMode == DayNightMode.SYSTEM) !systemIsDark else isDayModeVM
             val pickerSlot      by vm.shortcutPickerSlot.collectAsStateWithLifecycle()
             val appPickerTarget by vm.appPickerTarget.collectAsStateWithLifecycle()
+
+            LaunchedEffect(settings.respectSafeArea) {
+                respectOemSafeArea = settings.respectSafeArea
+                applySystemBarPolicy()
+            }
 
             val accent         = Color(settings.accentColor)
             val bg             = if (settings.useCustomBackgroundColor) {
@@ -125,7 +146,16 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize().let { m ->
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (settings.respectSafeArea) {
+                                Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .let { m ->
                         if (bgBrush != null) m.background(bgBrush) else m.background(bg)
                     }) {
                         // Optional wallpaper layer
@@ -162,12 +192,7 @@ class MainActivity : ComponentActivity() {
                                         vm.exitRearrangeMode()
                                         vm.navigate(dest)
                                     },
-                                    onShortcutClick = { slot ->
-                                        val shortcut = settings.shortcuts[slot]
-                                        if (shortcut.packageName.isNotEmpty()) {
-                                            vm.launchApp(shortcut.packageName)
-                                        }
-                                    },
+                                    onShortcutClick = vm::launchShortcut,
                                     onShortcutLongPress  = { slot -> vm.startShortcutPicker(slot) },
                                     onShortcutRemove     = { slot -> vm.removeShortcut(slot) },
                                     onShortcutSetIcon    = { slot, icon -> vm.setShortcutIcon(slot, icon) },
@@ -254,7 +279,14 @@ class MainActivity : ComponentActivity() {
                                         settings = settings,
                                         accent   = accent,
                                         onUpdate = { block -> vm.updateSettings(block) },
-                                        onReset  = { vm.resetSettings() }
+                                        onReset  = { vm.resetSettings() },
+                                        onOpenDiagnostics = { vm.navigate(NavDestination.DIAGNOSTICS) }
+                                    )
+
+                                    NavDestination.DIAGNOSTICS -> DiagnosticsScreen(
+                                        vm = vm,
+                                        onBack = { vm.navigate(NavDestination.SETTINGS) },
+                                        onExport = ::shareDiagnostics
                                     )
                                 }
                             }
