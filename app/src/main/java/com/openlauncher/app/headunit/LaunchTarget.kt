@@ -9,6 +9,13 @@ data class LaunchTarget(
     val uri: String? = null,
     val iconHint: String? = null,
     val requiredProfile: HeadUnitProfile? = null,
-    val notes: String? = null,
-    val isAvailable: Boolean = true
+    val notes: String? = null
 )
+
+data class LaunchTargetStatus(
+    val target: LaunchTarget,
+    val isAvailable: Boolean
+)
+
+internal fun LaunchTarget.supportsProfile(profile: HeadUnitProfile): Boolean =
+    requiredProfile == null || requiredProfile == profile
