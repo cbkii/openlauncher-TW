@@ -53,6 +53,9 @@ jobs:
 
       - name: Set up and validate Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
 
       - name: Prepare executable files
         run: chmod +x gradlew scripts/check-ts18-compatibility.sh
