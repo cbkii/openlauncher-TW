@@ -3,6 +3,7 @@
   <h1>Open Launcher</h1>
   <p><strong>An open-source, offline-first Android launcher built specifically for aftermarket car head units.</strong></p>
 
+  [![Android CI](https://github.com/cbkii/openlauncher-TW/actions/workflows/android-ci.yml/badge.svg)](https://github.com/cbkii/openlauncher-TW/actions/workflows/android-ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 </div>
