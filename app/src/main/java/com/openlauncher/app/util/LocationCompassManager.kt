@@ -16,7 +16,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-private const val RADIANS_TO_DEGREES = (180.0 / PI).toFloat()
+private val RADIANS_TO_DEGREES = (180.0 / PI).toFloat()
 
 data class LocationData(
     val latitude: Double,
@@ -64,7 +64,7 @@ class LocationCompassManager(context: Context) {
                 bearingSin = alpha * sin(azimuthRad) + (1f - alpha) * bearingSin
                 bearingCos = alpha * cos(azimuthRad) + (1f - alpha) * bearingCos
 
-                val bearingDegrees = atan2(bearingSin, bearingCos) * 57.29578f
+                val bearingDegrees = atan2(bearingSin, bearingCos) * RADIANS_TO_DEGREES
                 _bearing.value = (bearingDegrees + 360f) % 360f
             }
         }

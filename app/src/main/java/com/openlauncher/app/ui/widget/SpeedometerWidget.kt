@@ -19,7 +19,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private const val DEGREES_TO_RADIANS = (PI / 180.0).toFloat()
+private val DEGREES_TO_RADIANS = (PI / 180.0).toFloat()
 
 @Composable
 fun SpeedometerWidget(
