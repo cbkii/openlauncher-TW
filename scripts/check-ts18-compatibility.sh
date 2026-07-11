@@ -174,20 +174,20 @@ check_source_contract() {
     log "Source contract passed (minSdk=${min_sdk}, TS18 target API=29)"
 }
 
-find_aapt2() {
+find_aapt() {
     local candidate=''
     local sdk_root=${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}
     local matches=()
 
-    if [[ -n ${AAPT2:-} && -x ${AAPT2:-} ]]; then
-        printf '%s\n' "$AAPT2"
+    if [[ -n ${AAPT:-} && -x ${AAPT:-} ]]; then
+        printf '%s\n' "$AAPT"
         return 0
     fi
 
     if [[ -n $sdk_root && -d $sdk_root/build-tools ]]; then
         mapfile -t matches < <(
             find "$sdk_root/build-tools" -mindepth 2 -maxdepth 2 \
-                -type f -name aapt2 -perm -u+x -print 2>/dev/null |
+                -type f -name aapt -perm -u+x -print 2>/dev/null |
                 sort -V
         )
 
@@ -198,8 +198,8 @@ find_aapt2() {
         fi
     fi
 
-    if command -v aapt2 >/dev/null 2>&1; then
-        command -v aapt2
+    if command -v aapt >/dev/null 2>&1; then
+        command -v aapt
         return 0
     fi
 
@@ -208,7 +208,7 @@ find_aapt2() {
 
 check_apk() {
     local apk=$1
-    local aapt2=$2
+    local aapt=$2
     local badging_file
     local package_name
     local min_sdk
@@ -230,8 +230,8 @@ check_apk() {
     record_check
 
     badging_file="$TMP_DIR/$(basename -- "$apk").badging.txt"
-    if ! "$aapt2" dump badging "$apk" >"$badging_file"; then
-        fail "aapt2 could not inspect APK: $apk"
+    if ! "$aapt" dump badging "$apk" >"$badging_file"; then
+        fail "aapt could not inspect APK: $apk"
     fi
     record_check
 
@@ -315,7 +315,7 @@ parse_arguments() {
 }
 
 main() {
-    local aapt2=''
+    local aapt=''
     local apk
 
     parse_arguments "$@"
@@ -331,14 +331,14 @@ main() {
     TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/openlauncher-ts18.XXXXXXXX") ||
         fail 'Could not create a temporary directory'
 
-    if aapt2=$(find_aapt2); then
-        log "Using aapt2: $aapt2"
+    if aapt=$(find_aapt); then
+        log "Using aapt: $aapt"
     else
-        fail 'aapt2 was not found in ANDROID_SDK_ROOT, ANDROID_HOME or PATH'
+        fail 'aapt was not found in ANDROID_SDK_ROOT, ANDROID_HOME or PATH'
     fi
 
     for apk in "${APK_PATHS[@]}"; do
-        check_apk "$apk" "$aapt2"
+        check_apk "$apk" "$aapt"
     done
 
     if ((WARNINGS > 0)); then
