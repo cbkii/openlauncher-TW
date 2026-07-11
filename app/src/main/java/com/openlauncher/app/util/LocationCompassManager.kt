@@ -1,6 +1,8 @@
 package com.openlauncher.app.util
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -9,6 +11,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.PI
@@ -28,8 +31,9 @@ data class LocationData(
 
 class LocationCompassManager(context: Context) {
 
-    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    private val sensorManager   = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val appContext      = context.applicationContext
+    private val locationManager = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val sensorManager   = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private val _location  = MutableStateFlow<LocationData?>(null)
     private val _bearing   = MutableStateFlow(0f)
@@ -120,30 +124,50 @@ class LocationCompassManager(context: Context) {
             sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
 
-        // Location — Robust offline-first registration
-        // GPS Provider (Works 100% offline, sat-based)
-        try {
-            if (locationManager.allProviders.contains(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 3000L, 5f, locationListener
-                )
-                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let {
-                    locationListener.onLocationChanged(it)
-                }
-            }
-        } catch (_: Exception) {}
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            appContext,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+            appContext,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
-        // Network Provider (Works online, cell/wifi-based)
-        try {
-            if (locationManager.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER, 5000L, 10f, locationListener
-                )
-                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let {
-                    locationListener.onLocationChanged(it)
+        // GPS provider requires precise location permission.
+        if (hasFineLocation) {
+            try {
+                if (locationManager.allProviders.contains(LocationManager.GPS_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER, 3000L, 5f, locationListener
+                    )
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let {
+                        locationListener.onLocationChanged(it)
+                    }
                 }
+            } catch (_: SecurityException) {
+                // Permission may be revoked between the check and registration.
+            } catch (_: IllegalArgumentException) {
+                // Vendor provider disappeared or became unavailable during registration.
             }
-        } catch (_: Exception) {}
+        }
+
+        // Network provider accepts either coarse or precise location permission.
+        if (hasFineLocation || hasCoarseLocation) {
+            try {
+                if (locationManager.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER, 5000L, 10f, locationListener
+                    )
+                    locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let {
+                        locationListener.onLocationChanged(it)
+                    }
+                }
+            } catch (_: SecurityException) {
+                // Permission may be revoked between the check and registration.
+            } catch (_: IllegalArgumentException) {
+                // Vendor provider disappeared or became unavailable during registration.
+            }
+        }
     }
 
     fun stop() {
