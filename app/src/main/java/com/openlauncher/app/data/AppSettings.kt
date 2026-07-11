@@ -1,5 +1,8 @@
 package com.openlauncher.app.data
 
+import com.openlauncher.app.headunit.HeadUnitProfile
+import com.openlauncher.app.headunit.LaunchTarget
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
@@ -79,6 +82,7 @@ data class AppSettings(
     val showTelemetry: Boolean = true,
     val showNowPlaying: Boolean = true,
     val shortcuts: List<ShortcutConfig> = defaultShortcuts(),
+    val launchTargets: List<LaunchTarget> = emptyList(),
     val widgetLayout: List<WidgetConfig> = defaultWidgetLayout(),
     val carPlayPackage: String = "",
     val androidAutoPackage: String = "",
@@ -103,7 +107,9 @@ data class AppSettings(
     val vitalsAsBars: Boolean = false,
     val speedometerDigitalOnly: Boolean = false,
     val gradientDirection: GradientDirection = GradientDirection.DIAGONAL,
-    val useCustomBackgroundColor: Boolean = false
+    val useCustomBackgroundColor: Boolean = false,
+    val headUnitProfileOverride: HeadUnitProfile? = null,
+    val respectSafeArea: Boolean = true
 )
 
 fun defaultShortcuts() = listOf(

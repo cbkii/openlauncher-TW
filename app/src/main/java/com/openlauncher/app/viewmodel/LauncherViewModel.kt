@@ -24,6 +24,13 @@ import com.openlauncher.app.data.WeatherApi
 import com.openlauncher.app.data.activeWidgetIds
 import com.openlauncher.app.data.computeWidgetMove
 import com.openlauncher.app.data.defaultShortcuts
+import com.openlauncher.app.data.migrateShortcutsToLaunchTargets
+import com.openlauncher.app.headunit.HeadUnitProfileRepository
+import com.openlauncher.app.headunit.HeadUnitProfileDetector
+import com.openlauncher.app.headunit.HeadUnitProfile
+import com.openlauncher.app.headunit.LaunchTargetResolver
+import com.openlauncher.app.headunit.LaunchTargetStatus
+import com.openlauncher.app.headunit.topway.TopwayTs18LaunchTargets
 import com.openlauncher.app.util.SunriseSunset
 import com.openlauncher.app.model.AppInfo
 import com.openlauncher.app.model.NavDestination
@@ -85,10 +92,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun assignShortcut(slot: Int, app: AppInfo) {
         updateSettings {
-            copy(shortcuts = shortcuts.toMutableList().also { list ->
+            val updated = shortcuts.toMutableList().also { list ->
                 while (list.size <= slot) list.add(ShortcutConfig())
                 list[slot] = ShortcutConfig(packageName = app.packageName, label = app.appName)
-            })
+            }
+            withSyncedShortcuts(updated)
         }
         _shortcutPickerSlot.value = null
         _nav.value = NavDestination.HOME
@@ -96,29 +104,47 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun removeShortcut(slot: Int) {
         updateSettings {
-            copy(shortcuts = shortcuts.toMutableList().also { list ->
+            val updated = shortcuts.toMutableList().also { list ->
                 if (slot in list.indices) {
                     list[slot] = defaultShortcuts().getOrNull(slot) ?: ShortcutConfig()
                 }
-            })
+            }
+            withSyncedShortcuts(updated)
         }
     }
 
     fun reorderShortcut(from: Int, to: Int) {
         updateSettings {
-            copy(shortcuts = shortcuts.toMutableList().also { list ->
+            val updated = shortcuts.toMutableList().also { list ->
                 val item = list.removeAt(from)
                 list.add(to.coerceIn(0, list.size), item)
-            })
+            }
+            withSyncedShortcuts(updated)
         }
     }
 
     fun setShortcutIcon(slot: Int, icon: DefaultShortcutIcon?) {
         updateSettings {
-            copy(shortcuts = shortcuts.toMutableList().also { list ->
+            val updated = shortcuts.toMutableList().also { list ->
                 if (slot in list.indices) list[slot] = list[slot].copy(customIconOverride = icon)
-            })
+            }
+            withSyncedShortcuts(updated)
         }
+    }
+
+    private fun AppSettings.withSyncedShortcuts(updated: List<ShortcutConfig>): AppSettings {
+        val customTargets = launchTargets.filterNot { it.id.startsWith("legacy-shortcut-") }
+        return copy(
+            shortcuts = updated,
+            launchTargets = migrateShortcutsToLaunchTargets(updated) + customTargets
+        )
+    }
+
+    fun launchShortcut(slot: Int) {
+        if (launchHeadUnitTarget("legacy-shortcut-$slot")) return
+        settings.value.shortcuts.getOrNull(slot)?.packageName
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::launchApp)
     }
 
     fun cancelShortcutPicker() {
@@ -487,6 +513,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var radioObserver: ContentObserver? = null
 
+    private fun stopHardwareRadioObserver() {
+        radioObserver?.let { getApplication<Application>().contentResolver.unregisterContentObserver(it) }
+        radioObserver = null
+        _mcuRadio.value = null
+    }
+
     private fun startHardwareRadioObserver() {
         if (radioObserver != null) return
         _mcuRadio.value = parseRadioJson()
@@ -604,14 +636,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun launchHardwareRadioApp() {
-        if (hasSzchoicewayMcu) radioStart()
+        val effectiveProfile = headUnitProfileRepo.getEffectiveProfile()
+        if (effectiveProfile == HeadUnitProfile.Szchoiceway) {
+            radioStart()
+        }
         val pkg = settings.value.radioPackage.ifEmpty {
-            when {
-                hasSzchoicewayMcu -> "com.szchoiceway.radio"
-                else              -> radioSessionController()?.packageName ?: ""
+            when (effectiveProfile) {
+                HeadUnitProfile.Szchoiceway -> "com.szchoiceway.radio"
+                HeadUnitProfile.TopwayTs18Dofun -> {
+                    // Exclude com.tw.radio
+                    val sessionPkg = radioSessionController()?.packageName
+                    if (sessionPkg == "com.tw.radio") "com.navimods.radio" else sessionPkg ?: "com.navimods.radio"
+                }
+                else -> radioSessionController()?.packageName ?: ""
             }
         }
-        if (pkg.isNotEmpty()) {
+        if (pkg.isNotEmpty() && pkg != "com.tw.radio") {
             runCatching {
                 val intent = getApplication<Application>().packageManager
                     .getLaunchIntentForPackage(pkg)
@@ -653,10 +693,68 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         radioObserver = null
     }
 
+    private val headUnitProfileRepo = HeadUnitProfileRepository()
+    private val launchTargetResolver = LaunchTargetResolver(application)
+
+    val detectedHeadUnitProfile: StateFlow<HeadUnitProfile> = headUnitProfileRepo.detectedProfile
+    val headUnitDetectionConfidence = headUnitProfileRepo.confidence
+    val headUnitEvidence = headUnitProfileRepo.evidence
+    val effectiveHeadUnitProfile: StateFlow<HeadUnitProfile> =
+        headUnitProfileRepo.effectiveProfile.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            headUnitProfileRepo.getEffectiveProfile()
+        )
+    val launchTargetStatuses: StateFlow<List<LaunchTargetStatus>> =
+        combine(effectiveHeadUnitProfile, settings) { profile, currentSettings ->
+            buildList {
+                if (profile == HeadUnitProfile.TopwayTs18Dofun) {
+                    addAll(TopwayTs18LaunchTargets.preset)
+                }
+                addAll(currentSettings.launchTargets)
+            }
+                .distinctBy { it.id }
+                .map { target ->
+                    LaunchTargetStatus(
+                        target = target,
+                        isAvailable = launchTargetResolver.isAvailable(target, profile)
+                    )
+                }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun launchHeadUnitTarget(targetId: String): Boolean {
+        val status = launchTargetStatuses.value.firstOrNull { it.target.id == targetId }
+            ?: return false
+        val intent = launchTargetResolver.resolve(
+            status.target,
+            effectiveHeadUnitProfile.value
+        ) ?: return false
+        return runCatching {
+            getApplication<Application>().startActivity(intent)
+        }.isSuccess
+    }
+
     init {
+        val detector = HeadUnitProfileDetector(application)
+        headUnitProfileRepo.updateDetection(detector.detect())
+
+        viewModelScope.launch {
+            settings.collect { s ->
+                headUnitProfileRepo.setOverride(s.headUnitProfileOverride)
+            }
+        }
+
         loadInstalledApps()
         refreshConnectivity()
-        if (hasSzchoicewayMcu) startHardwareRadioObserver()
+        viewModelScope.launch {
+            headUnitProfileRepo.effectiveProfile.collect { effectiveProfile ->
+                if (effectiveProfile == HeadUnitProfile.Szchoiceway) {
+                    startHardwareRadioObserver()
+                } else {
+                    stopHardwareRadioObserver()
+                }
+            }
+        }
         // Fetch weather on first location fix, then every 30 minutes.
         // The minute ticker covers the parked case where no location updates arrive.
         viewModelScope.launch {

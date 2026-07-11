@@ -80,3 +80,10 @@ For each PR:
 - Do not claim TS18 runtime success without device validation.
 - Include fallback paths for missing components.
 - Keep non-TS18 behaviour unchanged unless a change is intentional and tested.
+
+## Update: TS18 Implementation Details
+* Added evidence-based `HeadUnitProfile` detection with an effective-profile override flow.
+* Created `TopwayTs18LaunchTargets` excluding stock radio/music and resolving every target before use.
+* Added runtime-inset safe-area handling that remains user-configurable.
+* Added a user-visible diagnostics screen with local JSON sharing and target availability.
+* Profile-gated the existing Szchoiceway observer so it is never treated as a TS18 backend.

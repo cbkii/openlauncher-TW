@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.openlauncher.app.headunit.LaunchTarget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -59,6 +60,9 @@ class SettingsRepository(private val context: Context) {
         val SPEEDOMETER_DIGITAL_ONLY = booleanPreferencesKey("speedometer_digital_only")
         val GRADIENT_DIRECTION    = stringPreferencesKey("gradient_direction")
         val USE_CUSTOM_BG_COLOR   = booleanPreferencesKey("use_custom_bg_color")
+        val HEAD_UNIT_PROFILE_OVERRIDE = stringPreferencesKey("head_unit_profile_override")
+        val RESPECT_SAFE_AREA       = booleanPreferencesKey("respect_safe_area")
+        val LAUNCH_TARGETS          = stringPreferencesKey("launch_targets")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data
@@ -88,6 +92,13 @@ class SettingsRepository(private val context: Context) {
                 // Migrate: old 2×2 layout has no widget with gridX≥2 — replace with new 3×2 default
                 if (loaded.none { it.gridX >= 2 }) defaults.widgetLayout else loaded
             } else defaults.widgetLayout
+
+            val storedLaunchTargets = prefs[Keys.LAUNCH_TARGETS]
+            val launchTargets = if (storedLaunchTargets == null) {
+                migrateShortcutsToLaunchTargets(shortcuts)
+            } else {
+                parseLaunchTargets(storedLaunchTargets)
+            }
 
             return AppSettings(
                 vehicleName    = prefs[Keys.VEHICLE_NAME]     ?: defaults.vehicleName,
@@ -134,8 +145,18 @@ class SettingsRepository(private val context: Context) {
                 vitalsAsBars     = prefs[Keys.VITALS_AS_BARS] ?: defaults.vitalsAsBars,
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
                 gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
-                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor
+                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
+                headUnitProfileOverride = prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE]?.let { runCatching { com.openlauncher.app.headunit.HeadUnitProfile.valueOf(it) }.getOrNull() },
+                respectSafeArea        = prefs[Keys.RESPECT_SAFE_AREA] ?: true,
+                launchTargets          = launchTargets
             )
+    }
+
+    private fun parseLaunchTargets(json: String): List<LaunchTarget> {
+        if (json.isEmpty()) return emptyList()
+        return runCatching {
+            gson.fromJson(json, object : com.google.gson.reflect.TypeToken<List<LaunchTarget>>() {}.type)
+        }.getOrNull() ?: emptyList()
     }
 
     suspend fun saveSettings(s: AppSettings) {
@@ -191,9 +212,23 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] = s.speedometerDigitalOnly
             prefs[Keys.GRADIENT_DIRECTION] = s.gradientDirection.name
             prefs[Keys.USE_CUSTOM_BG_COLOR] = s.useCustomBackgroundColor
+            s.headUnitProfileOverride?.let { prefs[Keys.HEAD_UNIT_PROFILE_OVERRIDE] = it.name } ?: prefs.remove(Keys.HEAD_UNIT_PROFILE_OVERRIDE)
+            prefs[Keys.RESPECT_SAFE_AREA]        = s.respectSafeArea
+            prefs[Keys.LAUNCH_TARGETS]           = gson.toJson(s.launchTargets)
     }
 
     suspend fun resetToDefaults() {
         context.dataStore.edit { it.clear() }
     }
 }
+
+internal fun migrateShortcutsToLaunchTargets(shortcuts: List<ShortcutConfig>): List<LaunchTarget> =
+    shortcuts.mapIndexed { index, shortcut ->
+        LaunchTarget(
+            id = "legacy-shortcut-$index",
+            label = shortcut.label,
+            packageName = shortcut.packageName.takeIf { it.isNotBlank() },
+            iconHint = shortcut.defaultIcon.name,
+            notes = "Migrated from the package-only shortcut at slot $index."
+        )
+    }

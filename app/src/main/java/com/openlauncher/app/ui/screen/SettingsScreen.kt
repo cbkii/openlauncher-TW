@@ -26,6 +26,8 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.openlauncher.app.headunit.HeadUnitProfile
+import com.openlauncher.app.ui.components.ConfirmDialog
 import com.openlauncher.app.data.AppFont
 import com.openlauncher.app.data.AppSettings
 import com.openlauncher.app.data.DayNightMode
@@ -50,6 +52,7 @@ fun SettingsScreen(
     accent: Color,
     onUpdate: (AppSettings.() -> AppSettings) -> Unit,
     onReset: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -317,6 +320,30 @@ fun SettingsScreen(
             }
 
             SettingsDivider()
+            SettingsRow(label = "Head Unit Profile Override", sublabel = settings.headUnitProfileOverride?.name ?: "Auto Detect", icon = Icons.Default.DirectionsCar) {
+                val profiles = listOf(
+                    "Auto Detect",
+                    HeadUnitProfile.StandardAndroid.name,
+                    HeadUnitProfile.TopwayTs18Dofun.name,
+                    HeadUnitProfile.Szchoiceway.name
+                )
+                val current = settings.headUnitProfileOverride?.name ?: "Auto Detect"
+                val idx = profiles.indexOf(current)
+                val next = if (idx < profiles.size - 1) profiles[idx + 1] else profiles[0]
+                val nextProfile = if (next == "Auto Detect") null else HeadUnitProfile.valueOf(next)
+                onUpdate { copy(headUnitProfileOverride = nextProfile) }
+            }
+            SettingsRow(label = "Respect OEM Safe Area", sublabel = if (settings.respectSafeArea) "Yes" else "No", icon = Icons.Default.AspectRatio) {
+                onUpdate { copy(respectSafeArea = !settings.respectSafeArea) }
+            }
+            SettingsRow(
+                label = "Head Unit Diagnostics",
+                sublabel = "Detection evidence, insets and launch targets",
+                icon = Icons.Default.BugReport
+            ) {
+                TextButton(onClick = onOpenDiagnostics) { Text("Open") }
+            }
+
 
             SettingsRow(label = "Unit System", sublabel = if (settings.unitSystem == UnitSystem.METRIC) "Metric (°C, km)" else "Imperial (°F, mi)", icon = Icons.Default.Straighten) {
                 Row {
