@@ -115,7 +115,7 @@ extract_single_gradle_integer() {
     )
 
     if ((${#values[@]} != 1)); then
-        fail "Expected exactly one numeric ${key} declaration in $path"
+        return 1
     fi
 
     printf '%s\n' "${values[0]}"
@@ -133,7 +133,12 @@ check_source_contract() {
     require_file 'gradle/wrapper/gradle-wrapper.properties'
     require_file 'gradlew'
 
-    min_sdk=$(extract_single_gradle_integer 'minSdk' "$gradle_file")
+    if min_sdk=$(extract_single_gradle_integer 'minSdk' "$gradle_file"); then
+        :
+    else
+        fail "Expected exactly one numeric minSdk declaration in $gradle_file"
+    fi
+
     if ((min_sdk > 29)); then
         fail "minSdk ${min_sdk} excludes the Android 10/API 29 TS18 target"
     fi
