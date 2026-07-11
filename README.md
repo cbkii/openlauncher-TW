@@ -3,6 +3,7 @@
   <h1>Open Launcher</h1>
   <p><strong>An open-source, offline-first Android launcher built specifically for aftermarket car head units.</strong></p>
 
+  [![Android CI](https://github.com/cbkii/openlauncher-TW/actions/workflows/android-ci.yml/badge.svg)](https://github.com/cbkii/openlauncher-TW/actions/workflows/android-ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 </div>
@@ -41,8 +42,8 @@ This project is currently in active development, but the core foundation is high
 
 <img width="2400" height="896" alt="Screenshot_20260527-025436" src="https://github.com/user-attachments/assets/a1bc63f3-2d4e-4ac0-bd56-b5d181681658" />
 <img width="2400" height="896" alt="Screenshot_20260527-212602" src="https://github.com/user-attachments/assets/cf319144-0a06-4bc6-ab83-855ef8514a9c" />
-<img width="2400" height="896" alt="Screenshot_20260527-025446" src="https://github.com/user-attachments/assets/cc038c53-dcf5-4b4b-bd73-bfcd18bd82d2" />
-<img width="2400" height="896" alt="Screenshot_20260527-025451" src="https://github.com/user-attachments/assets/cc038c53-dcf5-4b4b-bd73-bfcd18bd82d2" />
+<img width="2400" height="896" alt="Screenshot_20260527-025446" src="https://github.com/user-attachments/assets/cc038c53-dcf5-4b4b-bd68-ff16b486fa13" />
+<img width="2400" height="896" alt="Screenshot_20260527-025451" src="https://github.com/user-attachments/assets/cc038c53-dcf5-4b4b-bd68-ff16b486fa13" />
 
 ### 🧩 Modular Widget Grid
 The home screen is a fully drag-and-drop, resize-capable grid. Every widget pane can be moved, scaled, and stacked however you want. Nothing is locked to a fixed position. Add and remove widgets from the built-in library at any time.
@@ -94,7 +95,7 @@ The current priority is **stability and universal compatibility** — ensuring t
 
 Remaining targets:
 
-- [ ] **Advanced Color Engine:** Per-element hex control for every surface in the UI — accent, text, borders, backgrounds — to precisely match a car's specific dashboard ambient lighting.
+- [ ] **Advanced Color Engine:** Per-element hex control for every surface — accent, text, borders, backgrounds — to precisely match a car's specific dashboard ambient lighting.
 - [ ] **Offline Weather via FM/RDS:** A highly experimental goal to pull local weather data directly from FM radio bands (RDS/TMC) using the car's physical antenna — bypassing Wi-Fi entirely.
 - [ ] **Universal Theming Engine:** A standardized platform for the community to build, share, and install full visual themes.
 
@@ -102,7 +103,7 @@ Remaining targets:
 
 ## 🤝 Contributing (Open Source First)
 
-This project is open-source because it takes a community to build something that works across hundreds of different head unit models. Whether you are a developer, a designer, or just someone testing it in your car, your help is welcome!
+This project is open-source because it takes a community to build something that works across hundreds of different head unit models. Whether you're a developer, a designer, or just someone testing it in your car, your help is welcome!
 
 ### How you can help:
 1. **Test on your hardware:** Install the APK on your specific head unit, break things, and submit Bug Reports in the [Issues tab](../../issues).
