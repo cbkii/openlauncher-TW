@@ -1,0 +1,127 @@
+name: Android CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  android-ci:
+    name: Build, test, lint and TS18 contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false
+        -Dorg.gradle.warning.mode=all
+        -Dfile.encoding=UTF-8
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          check-latest: false
+
+      - name: Set up and validate Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare executable files
+        run: chmod +x gradlew scripts/check-ts18-compatibility.sh
+
+      - name: Validate source and TS18 launcher contracts
+        run: |
+          bash -n scripts/check-ts18-compatibility.sh
+          scripts/check-ts18-compatibility.sh --source-only
+
+      - name: Run unit tests, Android lint and APK builds
+        run: >-
+          ./gradlew
+          --no-daemon
+          --stacktrace
+          --console=plain
+          :app:testDebugUnitTest
+          :app:lintDebug
+          :app:assembleDebug
+          :app:assembleRelease
+
+      - name: Validate built APKs for TS18
+        run: |
+          scripts/check-ts18-compatibility.sh \
+            app/build/outputs/apk/debug/app-debug.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Generate APK checksums
+        run: |
+          mkdir -p build/ci
+          sha256sum \
+            app/build/outputs/apk/debug/app-debug.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            | tee build/ci/APK_SHA256SUMS.txt
+
+      - name: Upload test and lint reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: openlauncher-ci-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload verified APKs
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: openlauncher-apks-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release-unsigned.apk
+            build/ci/APK_SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Write workflow summary
+        if: ${{ success() }}
+        run: |
+          {
+            echo '## Android CI passed'
+            echo
+            echo '- Unit tests: `:app:testDebugUnitTest`'
+            echo '- Android lint: `:app:lintDebug`'
+            echo '- Debug APK: built and TS18-contract checked'
+            echo '- Release APK: built unsigned and TS18-contract checked'
+            echo '- Target device baseline: Android 10 / API 29 / ARM'
+            echo
+            echo 'The release APK is intentionally unsigned; production signing remains a release-owner responsibility.'
+          } >> "$GITHUB_STEP_SUMMARY"
